@@ -44,7 +44,6 @@ contract('GnosisSafeTeamEdition', function(accounts) {
             utils.logGasUsage("confirm " + subject + " with " + account, await gnosisSafe.approveTransactionWithParameters(to, value, data, operation, txGasEstimate, nonce, {from: account}))
         }
 
-        assert.equal(await utils.getErrorMessage(gnosisSafe.address, 0, executeData, txSender, 40000), "Not enough confirmations")
         let tx = await gnosisSafe.execTransactionIfApproved(to, value, data, operation, txGasEstimate, nonce, {from: txSender})
         utils.logGasUsage(subject, tx)
 
