@@ -10,6 +10,8 @@ contract GnosisSafeTeamEdition is MasterCopy, GnosisSafe {
 
     string public constant NAME = "Gnosis Safe Team Edition";
     string public constant VERSION = "0.0.1";
+    
+    event ExecutionFailed(bytes32 txHash);
 
     // isExecuted mapping allows to check if a transaction (by hash) was already executed.
     mapping (bytes32 => uint256) public isExecuted;
@@ -25,18 +27,20 @@ contract GnosisSafeTeamEdition is MasterCopy, GnosisSafe {
     /// @param data Data payload of Safe transaction.
     /// @param operation Operation type of Safe transaction.
     /// @param nonce Nonce used for this Safe transaction.
+    /// @param safeTxGas Gas that should be available for the Safe transaction.
     function approveTransactionWithParameters(
         address to, 
         uint256 value, 
         bytes data, 
         Enum.Operation operation, 
+        uint256 safeTxGas,
         uint256 nonce
     )
         public
     {
         // Only Safe owners are allowed to confirm Safe transactions.
         require(owners[msg.sender] != 0, "Sender is not an owner");
-        bytes32 transactionHash = getTransactionHash(to, value, data, operation, nonce);
+        bytes32 transactionHash = getTransactionHash(to, value, data, operation, safeTxGas, nonce);
         // It should not be possible to confirm an executed transaction
         require(isExecuted[transactionHash] == 0, "Safe transaction already executed");
         isApproved[transactionHash][msg.sender] = 1;
@@ -47,22 +51,53 @@ contract GnosisSafeTeamEdition is MasterCopy, GnosisSafe {
     /// @param value Ether value of Safe transaction.
     /// @param data Data payload of Safe transaction.
     /// @param operation Operation type of Safe transaction.
+    /// @param safeTxGas Gas that should be available for the Safe transaction.
     /// @param nonce Nonce used for this Safe transaction.
     function execTransactionIfApproved(
         address to, 
         uint256 value, 
         bytes data, 
         Enum.Operation operation, 
+        uint256 safeTxGas,
         uint256 nonce
     )
         public
+        returns (bool success)
     {
-        bytes32 transactionHash = getTransactionHash(to, value, data, operation, nonce);
+        bytes32 transactionHash = getTransactionHash(to, value, data, operation, safeTxGas, nonce);
         require(isExecuted[transactionHash] == 0, "Safe transaction already executed");
         checkAndClearConfirmations(transactionHash);
         // Mark as executed and execute transaction.
         isExecuted[transactionHash] = 1;
-        require(execute(to, value, data, operation, gasleft()), "Could not execute safe transaction");
+        //require(gasleft() >= safeTxGas, "Not enough gas to execute safe transaction");
+        success = execute(to, value, data, operation, safeTxGas);
+        if (!success) {
+            emit ExecutionFailed(transactionHash);
+        }
+    }
+
+    /// @dev Allows to estimate a Safe transaction. 
+    ///      This method is only meant for estimation purpose, therfore two different protection mechanism against execution in a transaction have been made:
+    ///      1.) The method can only be called from the safe itself
+    ///      2.) The response is returned with a revert
+    ///      When estimating set `from` to the address of the safe.
+    ///      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the safe with `execTransactionAndPaySubmitter`
+    /// @param to Destination address of Safe transaction.
+    /// @param value Ether value of Safe transaction.
+    /// @param data Data payload of Safe transaction.
+    /// @param operation Operation type of Safe transaction.
+    /// @return Estimate without refunds and overhead fees (base transaction and payload data gas costs).
+    function requiredTxGas(address to, uint256 value, bytes data, Enum.Operation operation)
+        public
+        authorized
+        returns (uint256)
+    {
+        uint256 startGas = gasleft();
+        // We don't provide an error message here, as we use it to return the estimate
+        require(execute(to, value, data, operation, gasleft()));
+        uint256 requiredGas = startGas - gasleft();
+        // Convert response to string and return via error message
+        revert(string(abi.encodePacked(requiredGas)));
     }
 
     function checkAndClearConfirmations(bytes32 transactionHash)
@@ -78,7 +113,7 @@ contract GnosisSafeTeamEdition is MasterCopy, GnosisSafe {
                 if (ownerConfirmed) {
                     approvals[currentOwner] = 0;
                 }
-                confirmations ++;
+                confirmations++;
             }
             currentOwner = owners[currentOwner];
         }
@@ -90,6 +125,7 @@ contract GnosisSafeTeamEdition is MasterCopy, GnosisSafe {
     /// @param value Ether value.
     /// @param data Data payload.
     /// @param operation Operation type.
+    /// @param safeTxGas Fas that should be used for the safe transaction.
     /// @param nonce Transaction nonce.
     /// @return Transaction hash.
     function getTransactionHash(
@@ -97,12 +133,13 @@ contract GnosisSafeTeamEdition is MasterCopy, GnosisSafe {
         uint256 value, 
         bytes data, 
         Enum.Operation operation, 
+        uint256 safeTxGas, 
         uint256 nonce
     )
         public
         view
         returns (bytes32)
     {
-        return keccak256(abi.encodePacked(byte(0x19), byte(0), this, to, value, data, operation, nonce));
+        return keccak256(abi.encodePacked(byte(0x19), byte(0), this, to, value, data, operation, safeTxGas, nonce));
     }
 }
