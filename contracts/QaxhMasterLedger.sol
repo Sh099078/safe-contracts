@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-/// @title
+/// @title blabla
 /// @author clem
 contract QaxhMasterLedger {
 
