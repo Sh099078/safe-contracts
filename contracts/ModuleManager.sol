@@ -24,7 +24,7 @@ contract ModuleManager is SelfAuthorized, Executor {
     {
         address[] memory array = this.getModules();
         for (uint256 i = 0; i < array.length; i++){
-            Module(array[i]).handle(msg.sender, msg.value);
+            Module(array[i]).handle(msg.sender, msg.value, msg.data);
         }
     }
     

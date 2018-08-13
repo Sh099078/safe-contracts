@@ -28,7 +28,8 @@ contract Module is MasterCopy {
     //to be overwritten in QaxhModule
     function handle(
         address sender,
-        uint256 value
+        uint256 value,
+        bytes data
     )
     public
     {

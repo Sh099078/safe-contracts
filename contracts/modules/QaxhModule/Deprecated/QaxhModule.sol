@@ -1,7 +1,8 @@
 pragma solidity 0.4.24;
-import "../Module.sol";
-import "../GnosisSafe.sol";
-import "../QaxhMasterLedger.sol";
+import "../../../Module.sol";
+import "../../../GnosisSafe.sol";
+import "../../../QaxhMasterLedger.sol";
+import "../../../ModuleManager.sol";
 
 
 /// @title Modifier - modifie all functions of the gnosis safe - made to test
@@ -13,7 +14,6 @@ contract QaxhModule is Module {
     public
     {
         setManager();
-        //owner = _owner;
     }
 
     //non payable contract
@@ -58,21 +58,23 @@ contract QaxhModule is Module {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////Receiving and sending money///////////////////////////////////////////////
+    ///////////////////////////////// Handle receiving money ///////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
     //handle the ether sent to the safe
     //revert if the caller isn't the safe or if the person sending ether isn't the owner of the safe
     function handle(
         address sender,
-        uint256 value
+        uint256 value,
+        bytes data
     )
     public
     {
         require(msg.sender == address(manager));
-        require(isAuthorized(sender, value));
+        if (value != 0) require(handleDeposit(sender, value)); //revert if the safe if not allowed to receive this money
     }
 
-    function isAuthorized(
+    //Deposit
+    function handleDeposit( //formerly, isAuthorized
         address sender,
         uint256 value
     )
@@ -84,8 +86,11 @@ contract QaxhModule is Module {
         if (value < 5000000000) return true; //little loads are permitted
         if(qaxhMasterLedger.qaxhSafe(sender)) return true; //others qaxh safe are permitted
         return false;
-
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////Owner spending money//////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     function sendFromSafe(
         address to,
@@ -95,12 +100,52 @@ contract QaxhModule is Module {
     filterOwner
     returns (bool success)
     {
+
         require(manager.execTransactionFromModule(to, amount, "", Enum.Operation.Call), "Could not execute ether transfer");
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////// Allowance system ////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    mapping (address => uint256) private allowances;
+
+    //extern user asking for a transfert : no check is made at this point other
+    //than if he has enough allowance to withdraw the ammount
+    function transferFrom(
+        address to,
+        uint256 amount
+    )
+    public
+    {
+        require(amount <= allowances[msg.sender]);
+        allowances[msg.sender] -= amount;
+        manager.execTransactionFromModule(to, amount, "", Enum.Operation.Call);
+    }
+
+    function changeAllowance(
+        address user,
+        uint256 allowance
+    )
+    public
+    filterOwner
+    {
+        require(qaxhMasterLedger.qaxhSafe(user)); //only other qaxh safes are allowed to withdraw
+        allowances[user] = allowance;
+    }
+
+    function getAllowance(
+        address user
+    )
+    public
+    view
+    returns (uint256)
+    {
+        return allowances[user];
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////owner managing//////////////////////////////////////////////
+    ////////////////////////////////////Owner managing//////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     function replaceOwner(
@@ -128,6 +173,11 @@ contract QaxhModule is Module {
         return qaxh;
     }
 
+    event Log(
+        uint256 allowed,
+        uint256 asked
+    );
+
     function getOwner()
     public
     view
@@ -135,6 +185,5 @@ contract QaxhModule is Module {
     {
         return owner;
     }
-
 
 }
