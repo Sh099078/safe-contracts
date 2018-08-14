@@ -104,11 +104,14 @@ contract('AllowanceQaxhModule', function(accounts) {
         console.log("   Adding a safe to the ledger : OK")
 
         //non-qaxh address trying to add a safe to the ledger
+        var revert = false;
         try {
             await qaxhMasterLedger.addSafe(accounts[0], {from : accounts[0]})
         } catch (err) {
-            console.log("   Addresses others than qaxh can't remove safe from ledger : OK")
+            revert = true;
         }
+        assert(revert)
+        console.log("   Addresses others than qaxh can't remove safe from ledger : OK")
 
         //qaxh address removing a safe from the ledger
         assert(await qaxhMasterLedger.addSafe(accounts[1], {from : accounts[8]}), "lol")
@@ -117,13 +120,16 @@ contract('AllowanceQaxhModule', function(accounts) {
         console.log("   Removing a safe from the ledger : OK")
 
         //non-qaxh address trying to remove a safe from the ledger
+        revert = false
         try {
             await qaxhMasterLedger.removeSafe(accounts[0], {from : accounts[0]})
         } catch (err) {
-            console.log("   Addresses others than qaxh can't remove safe from ledger : OK")
+            revert = true;
         }
+        assert(revert)
+        console.log("   Addresses others than qaxh can't remove safe from ledger : OK")
 
-            //TESTING : loading the safe
+        //TESTING : loading the safe
         console.log("\n Loading the safe : \n ")
 
         //owner loading the safe
@@ -153,11 +159,14 @@ contract('AllowanceQaxhModule', function(accounts) {
         console.log("   Withdrawing ether from safe : OK")
 
         //non-owner trying to withdraw
+        revert = false
         try {
             await qaxhModule.sendFromSafe(accounts[0], web3.toWei(0.1, 'ether'), {from: accounts[0]})
         } catch (err) {
-            console.log("   Revert if a non-owner try to withdraw with sendFromSafe() : OK")
+            revert = true
         }
+        assert(revert)
+        console.log("   Revert if a non-owner try to withdraw with sendFromSafe() : OK")
 
         //owner withdrawing token
 
@@ -177,20 +186,26 @@ contract('AllowanceQaxhModule', function(accounts) {
         assert.equal(await qaxhModule.getAllowance(accounts[0], 0), 0)
 
         //unauthorized user trying to ask for funds
+        revert = false
         try {
             await qaxhModule.transferFrom(accounts[0], 4000, 0, {from : accounts[0]})
         } catch (err) {
-            console.log("   Revert if unauthorized user ask for funds : OK")
+            revert = true
         }
+        assert(revert)
+        console.log("   Revert if unauthorized user ask for funds : OK")
 
         //authorizing user who's not a qaxh safe
+        revert = false
         try {
             await qaxhMasterLedger.removeSafe(accounts[0], {from: accounts[8]})
             await qaxhModule.changeAllowance(accounts[0], web3.toWei(0.05, 'ether'), 0, {from: accounts[7]})
         } catch (err) {
-            console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
+            revert = true
             await qaxhMasterLedger.addSafe(accounts[0], {from: accounts[8]}) //for the next tests
         }
+        assert(revert)
+        console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
 
         //authorizing user who's a qaxh safe
         await qaxhModule.changeAllowance(accounts[0], web3.toWei(0.05, 'ether'), 0, {from : accounts[7]})
@@ -207,11 +222,14 @@ contract('AllowanceQaxhModule', function(accounts) {
         console.log("   Allowed user withdrawing funds : OK")
 
         //authorized user asking for funds over his limit
+        revert = false
         try {
             await qaxhModule.transferFrom(accounts[1], web3.toWei(0.04, 'ether'), 0, {from : accounts[0]} )
         } catch (err) {
-            console.log("   Revert if user try to go over his limit : OK")
+            revert = true
         }
+        assert(revert)
+        console.log("   Revert if user try to go over his limit : OK")
 
         //cleaning up after tests
         await qaxhModule.changeAllowance(accounts[0], 0, 0, {from : accounts[7]})
@@ -224,20 +242,26 @@ contract('AllowanceQaxhModule', function(accounts) {
         assert.equal(await qaxhModule.getAllowance(accounts[0], token.address), 0)
 
         //unauthorized user trying to ask for funds
+        revert = false;
         try {
             await qaxhModule.transferFrom(accounts[0], 4000, token.address, {from : accounts[0]})
         } catch (err) {
-            console.log("   Revert if unauthorized user ask for funds : OK")
+            revert = true;
         }
+        assert(revert)
+        console.log("   Revert if unauthorized user ask for funds : OK")
 
         //authorizing user who's not a qaxh safe
+        revert = false
         try {
             await qaxhMasterLedger.removeSafe(accounts[0], {from: accounts[8]})
             await qaxhModule.changeAllowance(accounts[0], 10, token.address, {from: accounts[7]})
         } catch (err) {
-            console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
+            revert = true
             await qaxhMasterLedger.addSafe(accounts[0], {from: accounts[8]}) //for the next tests
         }
+        assert(revert)
+        console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
 
         //authorizing user who's a qaxh safe
         await qaxhModule.changeAllowance(accounts[0], 10, token.address, {from : accounts[7]})
@@ -256,15 +280,20 @@ contract('AllowanceQaxhModule', function(accounts) {
         console.log("   Allowed user withdrawing funds : OK")
 
         //authorized user asking for funds over his limit
+        revert = false
         try {
             await qaxhModule.transferFrom(accounts[1], 9, token.address, {from : accounts[0]} )
         } catch (err) {
-            console.log("   Revert if user try to go over his limit : OK")
+            revert = true
         }
+        assert(revert)
+        console.log("   Revert if user try to go over his limit : OK")
 
         //cleaning up after tests
         await qaxhModule.changeAllowance(accounts[0], 0, token.address, {from : accounts[7]})
 
+
+        //-----------------------------------------DEPRECATED--------------------------------------------//
         /*
                 //TESTING : timed allowance system
         console.log("\n Timed allowance system : \n ")
