@@ -44,14 +44,17 @@ contract BasicQaxhModule is UtilsQaxhModule {
 
 	function sendFromSafe(
 		address to,
-		uint256 amount
+		uint256 amount,
+		address token
 	)
 	public
 	filterOwner
-	returns (bool success)
 	{
-
-		require(manager.execTransactionFromModule(to, amount, "", Enum.Operation.Call), "Could not execute ether transfer");
+		if (token == 0) {
+			require(manager.execTransactionFromModule(to, amount, "", Enum.Operation.Call), "Could not execute ether transfer");
+		} else {
+			bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", to, amount);
+			require(manager.execTransactionFromModule(token, 0, data, Enum.Operation.Call), "Could not execute token transfer");
+		}
 	}
-
 }

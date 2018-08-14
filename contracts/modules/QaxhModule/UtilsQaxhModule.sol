@@ -36,15 +36,23 @@ contract UtilsQaxhModule is Module {
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	modifier filterQaxh()
 	{
-		emit Event(msg.sender);
+		//emit Event(msg.sender);
 		require(msg.sender == qaxh, "This method can only be called by the qaxh address");
 		_;
 	}
 
 	modifier filterOwner()
 	{
-		emit Event(msg.sender);
+		//emit Event(msg.sender);
 		require(msg.sender == owner, "This method can only be called by the owner of the safe");
+		_;
+	}
+
+	modifier filterSelfOrOwner()
+	{
+		//emit Event(msg.sender);
+		require(msg.sender == address(this) || msg.sender == owner,
+			"This method can only be called by the owner of the safe or qaxh");
 		_;
 	}
 
@@ -65,7 +73,8 @@ contract UtilsQaxhModule is Module {
 	//////////////////////for development///////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	event Event(
-		address _address
+		address _address,
+		string _description
 	);
 
 	function getQaxh()

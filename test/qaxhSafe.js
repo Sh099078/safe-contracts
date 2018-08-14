@@ -5,8 +5,9 @@ const safeUtils = require('./utilsPersonalSafe')
 const GnosisSafe = artifacts.require("./GnosisSafePersonalEdition.sol");
 const CreateAndAddModules = artifacts.require("./libraries/CreateAndAddModules.sol");
 const ProxyFactory = artifacts.require("./ProxyFactory.sol");
-const TimedAllowanceQaxhModule = artifacts.require("./modules/QaxhModule/TimedAllowanceQaxhModule.sol");
+const AllowanceQaxhModule = artifacts.require("./modules/QaxhModule/AllowanceQaxhModule.sol");
 const QaxhMasterLedger = artifacts.require("./QaxhMasterLedger.sol");
+const HumanStandardToken = artifacts.require("./Token/HumanStandardToken.sol");
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -17,12 +18,13 @@ function sleep(ms) {
 
 //here, the qaxh address is played by accounts[8]
 
-contract('TimedAllowanceQaxhModule', function(accounts) {
+contract('AllowanceQaxhModule', function(accounts) {
 
     let gnosisSafe
     let qaxhModule
     let lw
     let qaxhMasterLedger
+    let token
 
     const CALL = 0
 
@@ -36,7 +38,7 @@ contract('TimedAllowanceQaxhModule', function(accounts) {
         let gnosisSafeMasterCopy = await GnosisSafe.new()
         // Initialize safe master copy
         gnosisSafeMasterCopy.setup([accounts[8]], 1, 0, "0x")
-        let qaxhModuleMasterCopy = await TimedAllowanceQaxhModule.new()
+        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new()
         // Initialize module master copy
         qaxhModuleMasterCopy.setup()
         // Create Gnosis Safe and Daily Limit Module in one transactions
@@ -52,11 +54,22 @@ contract('TimedAllowanceQaxhModule', function(accounts) {
         )
 
         let modules = await gnosisSafe.getModules()
-        qaxhModule = TimedAllowanceQaxhModule.at(modules[0])
+        qaxhModule = AllowanceQaxhModule.at(modules[0])
 
         qaxhMasterLedger = await QaxhMasterLedger.new()
         await qaxhMasterLedger.setQaxh(accounts[8])
         await qaxhModule.setLedger(qaxhMasterLedger.address)
+
+
+        //Create a token to test with and watch for transfers
+        token = await HumanStandardToken.new()
+        await token.setUp(1000, "Qaxh Coin Test", 18 , "EUR")
+
+        //var eventTransfer = token.Transfer();
+        //eventTransfer.watch(function(err, result) {console.log(
+        //    "Transfer of " + result.args._value + " EUR from " +  result.args._from + " to " + result.args._to )});
+
+
     })
 
 
@@ -64,16 +77,22 @@ contract('TimedAllowanceQaxhModule', function(accounts) {
 
         //qaxh is played by accounts[8]
         //the owner is played by accounts[7]
+        //the token creator is played by accounts[0]
         await qaxhModule.setQaxh(accounts[8])
         await qaxhModule.replaceOwner(accounts[7], {from : accounts[8]})
 
-        var event = qaxhModule.Log();
-        event.watch(function(err, result) {console.log("Event log : " + result.args.a.toString() + " , "
+        var log = qaxhModule.Log();
+        log.watch(function(err, result) {console.log("Event log : " + result.args.a.toString() + " , "
             + result.args.b.toString())});
 
-        var eventStruct = qaxhModule.Struct();
+        var event = qaxhModule.Event();
+        event.watch(function(err, result) {console.log("Event event : " + result.args._address.toString() + " , "
+            + result.args.description)});
+
+        /*var eventStruct = qaxhModule.Struct();
         eventStruct.watch(function(err, result) {console.log("Struct : " + result.args.a.toString() + " , "
             + result.args.b.toString() + ", " + result.args.c.toString())});
+        */
 
             //TESTING : setting up the ledger
         console.log("\n Ledger : \n ")
@@ -125,13 +144,13 @@ contract('TimedAllowanceQaxhModule', function(accounts) {
             //TESTING : withdrawing
         console.log("\n Withdrawing by the owner : \n ")
 
-        //owner withdrawing
+        //owner withdrawing ether
         let oldBalanceSafe = await web3.eth.getBalance(gnosisSafe.address).toNumber()
         let oldBalanceAccount = await web3.eth.getBalance(accounts[0]).toNumber()
-        await qaxhModule.sendFromSafe(accounts[0], web3.toWei(0.1, 'ether'), {from: accounts[7]})
+        await qaxhModule.sendFromSafe(accounts[0], web3.toWei(0.1, 'ether'), 0, {from: accounts[7]}) //0 is the code for ether
         assert.equal(oldBalanceSafe - await web3.eth.getBalance(gnosisSafe.address).toNumber() , web3.toWei(0.1, 'ether'))
         assert.equal(await web3.eth.getBalance(accounts[0]).toNumber() - oldBalanceAccount, web3.toWei(0.1, 'ether'))
-        console.log("   Withdrawing from safe : OK")
+        console.log("   Withdrawing ether from safe : OK")
 
         //non-owner trying to withdraw
         try {
@@ -140,14 +159,26 @@ contract('TimedAllowanceQaxhModule', function(accounts) {
             console.log("   Revert if a non-owner try to withdraw with sendFromSafe() : OK")
         }
 
-            //TESTING : simple allowance system
-        console.log("\n Simple allowance system : \n ")
+        //owner withdrawing token
 
-        assert.equal(await qaxhModule.getAllowance(accounts[0]), 0)
+        await token.transfer(gnosisSafe.address, 10) //loading the safe
+
+        oldBalanceSafe = await token.balanceOf(gnosisSafe.address)
+        oldBalanceAccount = await token.balanceOf(accounts[1])
+        await qaxhModule.sendFromSafe(accounts[1], 2, token.address, {from: accounts[7]})
+        assert.equal(oldBalanceSafe - await token.balanceOf(gnosisSafe.address) , 2)
+        assert.equal(await token.balanceOf(accounts[1]) - oldBalanceAccount, 2)
+        console.log("   Withdrawing token from safe : OK")
+
+
+        //TESTING : simple allowance system, with ether
+        console.log("\n Simple allowance system (ether) : \n ")
+
+        assert.equal(await qaxhModule.getAllowance(accounts[0], 0), 0)
 
         //unauthorized user trying to ask for funds
         try {
-            await qaxhModule.transferFrom(accounts[0], 4000, {from : accounts[0]})
+            await qaxhModule.transferFrom(accounts[0], 4000, 0, {from : accounts[0]})
         } catch (err) {
             console.log("   Revert if unauthorized user ask for funds : OK")
         }
@@ -155,37 +186,86 @@ contract('TimedAllowanceQaxhModule', function(accounts) {
         //authorizing user who's not a qaxh safe
         try {
             await qaxhMasterLedger.removeSafe(accounts[0], {from: accounts[8]})
-            await qaxhModule.changeAllowance(accounts[0], web3.toWei(0.05, 'ether'), {from: accounts[7]})
+            await qaxhModule.changeAllowance(accounts[0], web3.toWei(0.05, 'ether'), 0, {from: accounts[7]})
         } catch (err) {
             console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
             await qaxhMasterLedger.addSafe(accounts[0], {from: accounts[8]}) //for the next tests
         }
 
         //authorizing user who's a qaxh safe
-        await qaxhModule.changeAllowance(accounts[0], web3.toWei(0.05, 'ether'), {from : accounts[7]})
-        assert.equal(await qaxhModule.getAllowance(accounts[0]), web3.toWei(0.05, 'ether'))
+        await qaxhModule.changeAllowance(accounts[0], web3.toWei(0.05, 'ether'), 0, {from : accounts[7]})
+        assert.equal(await qaxhModule.getAllowance(accounts[0], 0), web3.toWei(0.05, 'ether'))
         console.log("   Changing allowance for an user : OK")
 
         //authorized user asking for funds under his limit
         oldBalanceAccount = await web3.eth.getBalance(accounts[1]).toNumber()
         oldBalanceSafe = await web3.eth.getBalance(gnosisSafe.address).toNumber()
-        await qaxhModule.transferFrom(accounts[1], web3.toWei(0.04, 'ether'), {from : accounts[0]} )
+        await qaxhModule.transferFrom(accounts[1], web3.toWei(0.04, 'ether'), 0, {from : accounts[0]} )
         assert.equal(await web3.eth.getBalance(accounts[1]).toNumber() -  oldBalanceAccount,  web3.toWei(0.04, 'ether'))
         assert.equal(oldBalanceSafe - await web3.eth.getBalance(gnosisSafe.address).toNumber(),  web3.toWei(0.04, 'ether'))
-        assert.equal(await qaxhModule.getAllowance(accounts[0]), web3.toWei(0.01, 'ether'))
+        assert.equal(await qaxhModule.getAllowance(accounts[0], 0), web3.toWei(0.01, 'ether'))
         console.log("   Allowed user withdrawing funds : OK")
 
         //authorized user asking for funds over his limit
         try {
-            await qaxhModule.transferFrom(accounts[1], web3.toWei(0.04, 'ether'), {from : accounts[0]} )
+            await qaxhModule.transferFrom(accounts[1], web3.toWei(0.04, 'ether'), 0, {from : accounts[0]} )
         } catch (err) {
             console.log("   Revert if user try to go over his limit : OK")
         }
 
         //cleaning up after tests
-        await qaxhModule.changeAllowance(accounts[0], 0, {from : accounts[7]})
+        await qaxhModule.changeAllowance(accounts[0], 0, 0, {from : accounts[7]})
 
 
+
+        //TESTING : simple allowance system, with token
+        console.log("\n Simple allowance system (token) : \n ")
+
+        assert.equal(await qaxhModule.getAllowance(accounts[0], token.address), 0)
+
+        //unauthorized user trying to ask for funds
+        try {
+            await qaxhModule.transferFrom(accounts[0], 4000, token.address, {from : accounts[0]})
+        } catch (err) {
+            console.log("   Revert if unauthorized user ask for funds : OK")
+        }
+
+        //authorizing user who's not a qaxh safe
+        try {
+            await qaxhMasterLedger.removeSafe(accounts[0], {from: accounts[8]})
+            await qaxhModule.changeAllowance(accounts[0], 10, token.address, {from: accounts[7]})
+        } catch (err) {
+            console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
+            await qaxhMasterLedger.addSafe(accounts[0], {from: accounts[8]}) //for the next tests
+        }
+
+        //authorizing user who's a qaxh safe
+        await qaxhModule.changeAllowance(accounts[0], 10, token.address, {from : accounts[7]})
+        assert.equal(await qaxhModule.getAllowance(accounts[0], token.address), 10)
+        console.log("   Changing allowance for an user : OK")
+
+        //authorized user asking for funds under his limit
+        oldBalanceAccount = await token.balanceOf(accounts[1])
+        oldBalanceSafe = await token.balanceOf(gnosisSafe.address)
+        await qaxhModule.transferFrom(accounts[1], 2, token.address, {from : accounts[0]} )
+        var diffAccount = await token.balanceOf(accounts[1]) -  oldBalanceAccount
+        var diffSafe = oldBalanceSafe - await token.balanceOf(gnosisSafe.address)
+        assert.equal(diffAccount, 2)
+        assert.equal(diffSafe, 2)
+        assert.equal(await qaxhModule.getAllowance(accounts[0], token.address), 8)
+        console.log("   Allowed user withdrawing funds : OK")
+
+        //authorized user asking for funds over his limit
+        try {
+            await qaxhModule.transferFrom(accounts[1], 9, token.address, {from : accounts[0]} )
+        } catch (err) {
+            console.log("   Revert if user try to go over his limit : OK")
+        }
+
+        //cleaning up after tests
+        await qaxhModule.changeAllowance(accounts[0], 0, token.address, {from : accounts[7]})
+
+        /*
                 //TESTING : timed allowance system
         console.log("\n Timed allowance system : \n ")
 
@@ -226,6 +306,8 @@ contract('TimedAllowanceQaxhModule', function(accounts) {
         } catch (err) {
             console.log("   Renewal doesn't activate before expected time : OK")
         }
+
+        */
 
     })
 

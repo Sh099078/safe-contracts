@@ -9,6 +9,8 @@ var CreateAndAddModules = artifacts.require("./CreateAndAddModules.sol");
 var MultiSend = artifacts.require("./MultiSend.sol");
 var Filter = artifacts.require("./Filter.sol");
 
+var HumanStandardToken = artifacts.require("./HumanStandardToken.sol");
+
 const notOwnedAddress = "0x0000000000000000000000000000000000000002"
 const notOwnedAddress2 = "0x0000000000000000000000000000000000000003"
 
@@ -43,4 +45,6 @@ module.exports = function(deployer) {
     });
     deployer.deploy(CreateAndAddModules);
     deployer.deploy(MultiSend);
+
+    deployer.deploy(HumanStandardToken);
 };
