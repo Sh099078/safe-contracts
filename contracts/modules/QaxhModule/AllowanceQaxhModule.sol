@@ -93,6 +93,8 @@ contract AllowanceQaxhModule is BasicQaxhModule {
 	// Asking your module to ask for funds
 
 	//called by the owner of this safe to call transferFrom() on the module at address otherModule.
+	// IDEA : it would maybe be best to pass otherSafe in parameter rather than otherModule,
+	// and to call the function on otherSafe.getModules()[0] (which must be a qaxh module, if other safe is a qaxh safe)
 	function askTransferFrom(
 		address otherModule,
 		address to,
