@@ -48,13 +48,14 @@ contract UtilsQaxhModule is Module {
 		_;
 	}
 
-	modifier filterSelfOrOwner()
-	{
+	//remove if still works without it
+	//modifier filterSelfOrOwner()
+	//{
 		//emit Event(msg.sender);
-		require(msg.sender == address(this) || msg.sender == owner,
-			"This method can only be called by the owner of the safe or qaxh");
-		_;
-	}
+		//require(msg.sender == address(this) || msg.sender == owner,
+		//	"This method can only be called by the owner of the safe or qaxh");
+		//_;
+	//}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////Owner managing//////////////////////////////////////////////
