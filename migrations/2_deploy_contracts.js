@@ -7,7 +7,6 @@ var SocialRecoveryModule = artifacts.require("./SocialRecoveryModule.sol");
 var WhitelistModule = artifacts.require("./WhitelistModule.sol");
 var CreateAndAddModules = artifacts.require("./CreateAndAddModules.sol");
 var MultiSend = artifacts.require("./MultiSend.sol");
-var Filter = artifacts.require("./Filter.sol");
 
 var HumanStandardToken = artifacts.require("./HumanStandardToken.sol");
 
@@ -37,10 +36,6 @@ module.exports = function(deployer) {
     });
     deployer.deploy(WhitelistModule).then(function (module) {
         module.setup([])
-        return module
-    });
-    deployer.deploy(Filter).then(function (module) {
-        module.setup()
         return module
     });
     deployer.deploy(CreateAndAddModules);
