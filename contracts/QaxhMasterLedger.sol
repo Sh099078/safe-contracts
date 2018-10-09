@@ -9,12 +9,9 @@ contract QaxhMasterLedger {
 
     mapping (address => bool) private isQaxhSafe;
 
-    //////////////a supprimer////////////////////////////////
-    function setQaxh(
-        address _qaxh
-    )
-    public
-    {
+    // Is currently used by the testsuite, but should eventually
+    // be removed when the definitive Qaxh address is set.
+    function setQaxh(address _qaxh) public {
         require(neverInitialized);
         qaxh = _qaxh;
         neverInitialized = false;
@@ -25,38 +22,18 @@ contract QaxhMasterLedger {
         _;
     }
 
-    //should be called when creating a qaxh safe
-    function addSafe(
-        address safe
-    )
-    public
-    filterQaxh
-    returns (bool success)
-    {
+    // Should be called when creating a qaxh safe
+    function addSafe(address safe) public filterQaxh returns (bool success) {
         isQaxhSafe[safe] = true;
         return isQaxhSafe[safe];
     }
 
-    //just in case a safe is compromised
-    function removeSafe(
-        address safe
-    )
-    public
-    filterQaxh
-    returns (bool success)
-    {
+    function removeSafe(address safe) public filterQaxh returns (bool success) {
         isQaxhSafe[safe] = false;
         return !(isQaxhSafe[safe]);
     }
 
-    function qaxhSafe(
-        address safe
-    )
-    public
-    view
-    returns (bool answer)
-    {
+    function qaxhSafe(address safe) public view returns (bool answer) {
         return isQaxhSafe[safe];
     }
-
 }
