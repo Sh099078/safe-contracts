@@ -1,5 +1,6 @@
 pragma solidity ^0.4.4;
 
+/// @title Mandatory interface for ERC20 Tokens
 interface Token {
 
     /// @return total amount of tokens

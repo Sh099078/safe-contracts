@@ -1,5 +1,4 @@
 const utils = require('./utils')
-//const solc = require('solc')
 const safeUtils = require('./utilsPersonalSafe')
 
 const GnosisSafe = artifacts.require("./GnosisSafePersonalEdition.sol");
@@ -22,7 +21,7 @@ contract('AllowanceQaxhModule', function(accounts) {
 
     let gnosisSafe
     let qaxhModule
-    let lw
+    let lw //lightWallet
     let qaxhMasterLedger
     let token
 
@@ -35,10 +34,12 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         // Create lightwallet
         lw = await utils.createLightwallet()
+
         // Create Master Copies
         let proxyFactory = await ProxyFactory.new()
         let createAndAddModules = await CreateAndAddModules.new()
         let gnosisSafeMasterCopy = await GnosisSafe.new()
+
         // Initialize safe master copy
         gnosisSafeMasterCopy.setup([accounts[8]], 1, 0, "0x")
 
@@ -48,7 +49,7 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         //Create a token to test with and watch for transfers
         token = await HumanStandardToken.new()
-        await token.setUp(1000, "Qaxh Coin Test", 18 , "EUR")
+        await token.setUp(1000, "Qaxh Coin Test", 18, "EUR")
 
         //module
         let qaxhModuleMasterCopy = await AllowanceQaxhModule.new()
@@ -118,12 +119,8 @@ contract('AllowanceQaxhModule', function(accounts) {
         event.watch(function(err, result) {console.log("Event event : " + result.args._address.toString() + " , "
             + result.args.description)});
 
-        /*var eventStruct = qaxhModule.Struct();
-        eventStruct.watch(function(err, result) {console.log("Struct : " + result.args.a.toString() + " , "
-            + result.args.b.toString() + ", " + result.args.c.toString())});
-        */
+        //TESTING : setting up the ledger
 
-            //TESTING : setting up the ledger
         console.log("\n Ledger : \n ")
 
         //qaxh address adding a safe to the ledger
@@ -206,10 +203,9 @@ contract('AllowanceQaxhModule', function(accounts) {
         oldBalanceSafe = await token.balanceOf(gnosisSafe.address)
         oldBalanceAccount = await token.balanceOf(accounts[1])
         await qaxhModule.sendFromSafe(accounts[1], 2, token.address, {from: accounts[7]})
-        assert.equal(oldBalanceSafe - await token.balanceOf(gnosisSafe.address) , 2)
+        assert.equal(oldBalanceSafe - await token.balanceOf(gnosisSafe.address), 2)
         assert.equal(await token.balanceOf(accounts[1]) - oldBalanceAccount, 2)
         console.log("   Withdrawing token from safe : OK")
-
 
         //TESTING : simple allowance system, with ether
         console.log("\n Simple allowance system (ether) : \n ")
