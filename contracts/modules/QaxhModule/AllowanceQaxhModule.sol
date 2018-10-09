@@ -41,14 +41,7 @@ contract AllowanceQaxhModule is BasicQaxhModule {
     }
 
     //do not erase this function, it's overwritten in TimedAllowanceQaxhModule.
-    function isUnderAllowance(
-        address sender,
-        uint256 amount,
-        address token
-    )
-        internal
-        returns (bool)
-    {
+    function isUnderAllowance(address sender, uint256 amount, address token) internal view returns (bool){
         return amount <= allowances[sender][token];
     }
 

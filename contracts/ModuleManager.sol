@@ -16,15 +16,11 @@ contract ModuleManager is SelfAuthorized, Executor {
 
     mapping (address => address) internal modules;
 
-    ///added for qaxh
-    /// @dev Fallback function accepts Ether transactions.
-    function ()
-        external
-        payable
-    {
+    /// @dev Added for the QaxhSafe modules so that it can treat Ether transactions.
+    function () external payable {
         address[] memory array = this.getModules();
         for (uint256 i = 0; i < array.length; i++){
-            Module(array[i]).handle(msg.sender, msg.value, msg.data);
+            Module(array[i]).handle(msg.sender, msg.value);
         }
     }
     

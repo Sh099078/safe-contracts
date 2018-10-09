@@ -24,15 +24,6 @@ contract Module is MasterCopy {
         manager = ModuleManager(msg.sender);
     }
 
-    //left empty
-    //to be overwritten in QaxhModule
-    function handle(
-        address sender,
-        uint256 value,
-        bytes data
-    )
-    public
-    {
-
-    }
+    // Function added for the Qaxh Safe modules.
+    function handle(address sender, uint256 value) public { }
 }

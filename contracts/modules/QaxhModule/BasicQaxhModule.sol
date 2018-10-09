@@ -7,14 +7,14 @@ import "./UtilsQaxhModule.sol";
 /// @author clem
 contract BasicQaxhModule is UtilsQaxhModule {
 
+    //TODO handle ERC20 tokens transactions with msg.data
     /// @dev Handles Ether received by the safe. The contract execution will revert if it wasn't
     ///      called by its ModuleManager or if the transaction is not authorized, i.e. It is not
     ///      coming from either the owner of the safe or another Qaxh safe and its amount has
     ///      exceeded the threshold for little transactions.
     /// @param sender The address sending Ether to the safe. Not to be confused with msg.sender().
     /// @param value The amount of Ether sent to the safe.
-    /// @param data The data field of the transaction (I guess).
-    function handle(address sender, uint256 value, bytes data) public {
+    function handle(address sender, uint256 value) public {
         if (value != 0) {
             require(msg.sender == address(manager), "Only the Manager can order transactions.");
             require(
