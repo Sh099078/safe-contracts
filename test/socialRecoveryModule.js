@@ -6,7 +6,7 @@ const GnosisSafe = artifacts.require("./GnosisSafePersonalEdition.sol");
 const SocialRecoveryModule = artifacts.require("./SocialRecoveryModule.sol");
 
 
-contract('SocialRecoveryModule', function(accounts) {
+contract.skip('SocialRecoveryModule', function(accounts) {
 
     let gnosisSafe
     let socialRecoveryModule

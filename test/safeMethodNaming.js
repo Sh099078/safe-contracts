@@ -5,7 +5,7 @@ const StateChannelModule = artifacts.require("./StateChannelModule.sol");
 const GnosisSafeTeam = artifacts.require("./GnosisSafeTeamEdition.sol");
 const GnosisSafePersonal = artifacts.require("./GnosisSafePersonalEdition.sol");
 
-contract('GnosisSafeEditions', function(accounts) {
+contract.skip('GnosisSafeEditions', function(accounts) {
 
     let getSortedFunctions = function(abi) {
         return abi.filter((e) => e.type === 'function')

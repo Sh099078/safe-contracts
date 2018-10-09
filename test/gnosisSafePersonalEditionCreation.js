@@ -7,7 +7,7 @@ const EthereumTx = require('ethereumjs-tx')
 
 const GnosisSafe = artifacts.require("./GnosisSafePersonalEdition.sol")
 
-contract('GnosisSafePersonalEdition', function(accounts) {
+contract.skip('GnosisSafePersonalEdition', function(accounts) {
 
     const CALL = 0
 

@@ -6,7 +6,7 @@ const GnosisSafe = artifacts.require("./GnosisSafePersonalEdition.sol");
 const WhitelistModule = artifacts.require("./WhitelistModule.sol");
 
 
-contract('WhitelistModule', function(accounts) {
+contract.skip('WhitelistModule', function(accounts) {
 
     let gnosisSafe
     let whitelistModule

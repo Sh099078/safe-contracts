@@ -9,7 +9,7 @@ const StateChannelModule = artifacts.require("./modules/StateChannelModule.sol")
 const TransactionWrapper = web3.eth.contract([{"constant":false,"inputs":[{"name":"operation","type":"uint8"},{"name":"to","type":"address"},{"name":"value","type":"uint256"},{"name":"data","type":"bytes"}],"name":"send","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]);
         
 
-contract('MultiSend', function(accounts) {
+contract.skip('MultiSend', function(accounts) {
 
     let gnosisSafe
     let multiSend

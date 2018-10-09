@@ -9,7 +9,7 @@ const SocialRecoveryModule = artifacts.require("./SocialRecoveryModule.sol");
 const StateChannelModule = artifacts.require("./modules/StateChannelModule.sol");
 
 
-contract('CreateAndAddModules', function(accounts) {
+contract.skip('CreateAndAddModules', function(accounts) {
 
     let gnosisSafe
     let lw

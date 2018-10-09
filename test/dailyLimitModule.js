@@ -7,7 +7,7 @@ const ProxyFactory = artifacts.require("./ProxyFactory.sol");
 const DailyLimitModule = artifacts.require("./modules/DailyLimitModule.sol");
 
 
-contract('DailyLimitModule', function(accounts) {
+contract.skip('DailyLimitModule', function(accounts) {
 
     let gnosisSafe
     let dailyLimitModule

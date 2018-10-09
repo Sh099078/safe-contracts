@@ -6,7 +6,7 @@ const GnosisSafe = artifacts.require("./GnosisSafe.sol")
 const StateChannelModule = artifacts.require("./modules/StateChannelModule.sol")
 const ProxyFactory = artifacts.require("./ProxyFactory.sol") 
 
-contract('StateChannelModule', function(accounts) {
+contract.skip('StateChannelModule', function(accounts) {
 
     let gnosisSafe
     let stateChannelModule
