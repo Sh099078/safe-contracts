@@ -28,6 +28,8 @@ contract('AllowanceQaxhModule', function(accounts) {
     let gnosisSafe2
     let qaxhModule2
 
+    let qaxh_address
+
     const CALL = 0
 
     beforeEach(async function () {
@@ -75,6 +77,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         let modules = await gnosisSafe.getModules()
         qaxhModule = AllowanceQaxhModule.at(modules[0])
         await qaxhModule.setLedger(qaxhMasterLedger.address)
+
         await qaxhModule.setQaxh(accounts[8])
         await qaxhModule.replaceOwner(accounts[7], {from : accounts[8]})
 
@@ -93,19 +96,80 @@ contract('AllowanceQaxhModule', function(accounts) {
         await qaxhModule2.setQaxh(accounts[8])
         await qaxhModule2.replaceOwner(accounts[0], {from : accounts[8]})
 
-        //var eventTransfer = token.Transfer();
-        //eventTransfer.watch(function(err, result) {console.log(
-        //    "Transfer of " + result.args._value + " EUR from " +  result.args._from + " to " + result.args._to )});
-
         //console.log("safe 1 : ", gnosisSafe.address)
         //console.log("module 1 : ", qaxhModule.address)
         //console.log("safe 2 : ", gnosisSafe2.address)
         //console.log("module 2 : ", qaxhModule2.address)
 
+        qaxh_address = accounts[8]
     })
 
+    it('activate, freeze and then delete a key', async () => {
+        let key = accounts[3]
 
-    it('every test is here', async () => {
+        assert.equal(await qaxhModule.isNotAnOwner(key), true)
+        assert.equal(await qaxhModule.isFrozen(key), false)
+        assert.equal(await qaxhModule.isActive(key), false)
+
+        await qaxhModule.activateKey(key, {from : qaxh_address})
+
+        assert.equal(await qaxhModule.isActive(key), true)
+        assert.equal(await qaxhModule.isFrozen(key), false)
+        assert.equal(await qaxhModule.isNotAnOwner(key), false)
+
+        await qaxhModule.freezeKey(key, {from: qaxh_address})
+
+        assert.equal(await qaxhModule.isActive(key), false)
+        assert.equal(await qaxhModule.isNotAnOwner(key), false)
+        assert.equal(await qaxhModule.isFrozen(key), true)
+
+        await qaxhModule.removeKey(key, {from: qaxh_address})
+
+        assert.equal(await qaxhModule.isNotAnOwner(key), true)
+        assert.equal(await qaxhModule.isFrozen(key), false)
+        assert.equal(await qaxhModule.isActive(key), false)
+    })
+
+    it('check presence of keys in keyList', async () => {
+        let k0 = accounts[0];
+        let k1 = accounts[1];
+        let k2 = accounts[2];
+        let k3 = accounts[3];
+        let k4 = accounts[4];
+
+        assert.equal(await qaxhModule.isInKeyList(k1), false)
+
+        for (i = 0; i < 5; i++)
+            await qaxhModule.activateKey(accounts[i], {from : qaxh_address});
+
+
+        assert.equal(await qaxhModule.isInKeyList(k2), true)
+        assert.equal(await qaxhModule.isInKeyList(k1), true)
+        assert.equal(await qaxhModule.isInKeyList(k4), true)
+
+        //Remove element in the middle of the list:
+
+        await qaxhModule.removeKey(k2, {from : qaxh_address});
+
+        assert.equal(await qaxhModule.isInKeyList(k1), true)
+        assert.equal(await qaxhModule.isInKeyList(k2), false)
+        assert.equal(await qaxhModule.isInKeyList(k4), true)
+
+        //Remove the sentinel:
+
+        await qaxhModule.removeKey(k0, {from : qaxh_address});
+
+        assert.equal(await qaxhModule.isInKeyList(k1), true)
+        assert.equal(await qaxhModule.isInKeyList(k4), true)
+        assert.equal(await qaxhModule.isInKeyList(k0), false)
+
+        // Verify that keyList corresponds to keyStatus:
+
+        for(i = 0; i < 5; i++)
+            assert.equal(await qaxhModule.isInKeyList(accounts[i]), await qaxhModule.isActive(accounts[i]))
+    })
+
+    it.skip('every test is here', async () => {
 
         //qaxh is played by accounts[8]
         //the owner is played by accounts[7]
