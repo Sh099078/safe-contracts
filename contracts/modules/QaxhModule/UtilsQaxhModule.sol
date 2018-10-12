@@ -6,6 +6,8 @@ import "../../QaxhMasterLedger.sol";
 /// @author clem
 contract UtilsQaxhModule is Module {
 
+    // STATE VARIABLES
+
     address internal qaxh = 0xeA41A27F8545d091ED604ac99CE46002eDA3E360;
     address internal owner;
     QaxhMasterLedger internal qaxhMasterLedger;
@@ -20,6 +22,9 @@ contract UtilsQaxhModule is Module {
     mapping (address => address) keyList;
     uint256 nbKeys; // needed to create a fixed-size array since Solidity can't currently return dynamically-sized arrays.
     address constant SENTINEL_KEYS = address(0x1);
+    uint8 constant MAX_KEYS = 10;
+
+    // INITIALIZATION FUNCTIONS
 
     /// @dev Setup function sets manager
     function setup() public {
@@ -37,12 +42,16 @@ contract UtilsQaxhModule is Module {
         qaxhMasterLedger = QaxhMasterLedger(_ledger);
     }
 
-    // Add, freeze or remove keys :
+    // KEYS MANAGEMENT
+
+    // Activate, freeze and remove keys :
 
     /// @dev Activate the key given as a parameter. It can be called by:
     ///         1.) Any active key.
     ///         2.) The key itself if its status is `Frozen`.
     ///         3.) The Qaxh address.
+    ///      NB: only the Qaxh address can create a new key : the other
+    ///      keys are only able to unfreeze frozen keys with this function.
     /// @param _key The key to activate.
     function activateKey(address _key) public {
         require(isValidKey(_key), "Invalid key");
@@ -53,6 +62,7 @@ contract UtilsQaxhModule is Module {
                 "Emitter not allowed to activate the key"
                );
         if (keyStatus[_key] == Status.NotAnOwner) {
+            require(msg.sender == qaxh, "Only Qaxh can add a new key to the safe");
             keyList[_key] = keyList[SENTINEL_KEYS];
             keyList[SENTINEL_KEYS] = _key;
         }
@@ -97,10 +107,11 @@ contract UtilsQaxhModule is Module {
     ///      be added to the QaxhSafe. Any key is valid, except :
     ///         1.) The 0x0 address (for implementation reasons).
     ///         2.) The SENTINEL_KEYS address (for implementation reasons).
-    ///         3.) The Qaxh address.
-    function isValidKey(address _key) internal view returns (bool) {
-        return _key != address(0) && _key != SENTINEL_KEYS && _key != qaxh;
+    function isValidKey(address _key) internal pure returns (bool) {
+        return _key != address(0) && _key != SENTINEL_KEYS;
     }
+
+    // List the safe keys, check for a key status :
 
     function isActive(address _key) public view returns (bool) {
         return keyStatus[_key] == Status.Active;
@@ -114,15 +125,37 @@ contract UtilsQaxhModule is Module {
         return keyStatus[_key] == Status.NotAnOwner;
     }
 
-    //To be Implemented
-    function ListAllKeys() public view returns (address[]) { }
+    /// @dev Returns a list of the keys added to the safe of the selected types.
+    ///      NB. This functions returns at most MAX_KEYS even though the safe might have more.
+    ///      The reason for that is that at the moment of its implementation you couldn't return
+    ///      dynamic arrays in Solidity. If you need to return more keys, increase MAX_KEYS accordingly.
+    /// @param active Set it to true to list active keys.
+    /// @param frozen Set it to true to list frozen keys.
+    function listKeys(bool active, bool frozen) public view returns (address[MAX_KEYS] keys) {
+        uint8 index;
+        for(address key = keyList[SENTINEL_KEYS]; key != address(0) && index < MAX_KEYS; key = keyList[key]){
+            if ((keyStatus[key] == Status.Frozen && frozen) || (keyStatus[key] == Status.Active && active)) {
+                keys[index] = key;
+                index++;
+            }
+        }
+        return keys;
+    }
 
-    //For debug purposes
+    // Functions used by the testsuite (to be removed in prod):
+
+    /// @dev Checks whether a key is present in keyList.
     function isInKeyList(address _key) public view returns (bool) {
         address curr = SENTINEL_KEYS;
         while (curr != _key && curr != address(0))
             curr = keyList[curr];
         return curr == _key;
+    }
+
+    /// @dev Returns the number of elements in the list before the first address(0).
+    function listLength(address[MAX_KEYS] list) public pure returns (uint256 length) {
+        for(length = 0; length < MAX_KEYS && list[length] != address(0); length++)
+            continue;
     }
 
     //TODO remove this function after step 3 is done.
@@ -133,7 +166,8 @@ contract UtilsQaxhModule is Module {
     // Permission modifiers :
 
     modifier filterOwner() {
-        require(keyStatus[msg.sender] == Status.Active, "This method can only be called by the owner of the safe");
+        require(keyStatus[msg.sender] == Status.Active,
+                "This method can only be called by the owner of the safe");
         _;
     }
 

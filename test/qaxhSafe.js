@@ -166,7 +166,24 @@ contract('AllowanceQaxhModule', function(accounts) {
         // Verify that keyList corresponds to keyStatus:
 
         for(i = 0; i < 5; i++)
-            assert.equal(await qaxhModule.isInKeyList(accounts[i]), await qaxhModule.isActive(accounts[i]))
+            assert.equal(await qaxhModule.isInKeyList(accounts[i]), !(await qaxhModule.isNotAnOwner(accounts[i])))
+    })
+
+    it('list the safe keys per type (active, frozen)', async () => {
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 0)
+        for(i = 0; i < 10; i++)
+            await qaxhModule.activateKey(accounts[i], {from : qaxh_address});
+
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, false)), 10)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 10)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(false, true)), 0)
+
+        for(i = 0; i < 10; i = i + 2)
+            await qaxhModule.freezeKey(accounts[i], {from : qaxh_address});
+
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(false, true)), 5)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, false)), 5)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 10)
     })
 
     it.skip('every test is here', async () => {
@@ -224,19 +241,19 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         //owner loading the safe
         await web3.eth.sendTransaction({from: accounts[7], to: gnosisSafe.address, value: web3.toWei(5, 'ether')})
-        assert.equal( await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5000000000000000000)
+        assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5000000000000000000)
         console.log("   Owner loading the safe : OK")
 
         //little payment loading the safe
         await web3.eth.sendTransaction({from: accounts[1], to: gnosisSafe.address, value: web3.toWei(0.000000001, 'ether')})
-        assert.equal( await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5000000001000000000)
+        assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5000000001000000000)
         console.log("   Little payments loading the safe : OK")
 
         //known safe loading the safe
         assert(await qaxhMasterLedger.addSafe(gnosisSafe2.address, {from : accounts[8]}), "lol") //adding second safe to first safe's known safes
         await web3.eth.sendTransaction({from: accounts[0], to: gnosisSafe2.address, value: web3.toWei(5, 'ether')}) //loading the second safe
         await qaxhModule2.sendFromSafe(gnosisSafe.address, web3.toWei(0.1, 'ether'), 0, {from: accounts[0]}) //loading the first safe from the second safe
-        assert.equal( await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5100000001000000000)
+        assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5100000001000000000)
         console.log("   Known safe loading the safe : OK")
 
             //TESTING : withdrawing
