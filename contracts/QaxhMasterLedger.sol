@@ -5,16 +5,11 @@ pragma solidity 0.4.24;
 contract QaxhMasterLedger {
 
     address qaxh;
-    bool neverInitialized = true;
 
     mapping (address => bool) private isQaxhSafe;
 
-    // Is currently used by the testsuite, but should eventually
-    // be removed when the definitive Qaxh address is set.
-    function setQaxh(address _qaxh) public {
-        require(neverInitialized);
+    constructor(address _qaxh) public {
         qaxh = _qaxh;
-        neverInitialized = false;
     }
 
     modifier filterQaxh {

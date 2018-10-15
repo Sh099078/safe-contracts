@@ -47,19 +47,17 @@ contract('AllowanceQaxhModule', function(accounts) {
         gnosisSafeMasterCopy.setup([qaxh_address], 1, 0, "0x")
 
         //QaxhMasterLedger
-        qaxhMasterLedger = await QaxhMasterLedger.new()
-        await qaxhMasterLedger.setQaxh(qaxh_address)
+        qaxhMasterLedger = await QaxhMasterLedger.new(qaxh_address)
 
         //Create a token to test with and watch for transfers
         token = await HumanStandardToken.new({from : token_creator})
         await token.setUp(1000, "Qaxh Coin Test", 18, "EUR")
 
         //module
-        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new()
-        qaxhModuleMasterCopy.setup()
+        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new(qaxh_address)
 
         // Create Gnosis Safe and Daily Limit Module in one transactions
-        let moduleData = await qaxhModuleMasterCopy.contract.setup.getData()
+        let moduleData = await qaxhModuleMasterCopy.contract.setup.getData(qaxh_address)
         let proxyFactoryData = await proxyFactory.contract.createProxy.getData(qaxhModuleMasterCopy.address, moduleData)
         let modulesCreationData = utils.createAndAddModulesData([proxyFactoryData])
         let createAndAddModulesData = createAndAddModules.contract.createAndAddModules.getData(proxyFactory.address, modulesCreationData)
@@ -76,8 +74,6 @@ contract('AllowanceQaxhModule', function(accounts) {
         qaxhModule = AllowanceQaxhModule.at(modules[0])
         await qaxhModule.setLedger(qaxhMasterLedger.address)
 
-        await qaxhModule.setQaxh(qaxh_address)
-
         // Second qaxh safe
         // Owner: Accounts[0]
         gnosisSafe2 = utils.getParamFromTxEvent(
@@ -88,7 +84,6 @@ contract('AllowanceQaxhModule', function(accounts) {
         let modules2 = await gnosisSafe2.getModules()
         qaxhModule2 = AllowanceQaxhModule.at(modules2[0])
         await qaxhModule2.setLedger(qaxhMasterLedger.address)
-        await qaxhModule2.setQaxh(qaxh_address)
     })
 
     it('activate, freeze and then delete a key', async () => {
@@ -368,8 +363,5 @@ contract('AllowanceQaxhModule', function(accounts) {
         }
         assert(revert)
         console.log("   Revert if user try to go over his limit : OK")
-
-        //cleaning up after tests
-        await qaxhModule.changeAllowance(gnosisSafe2.address, 0, token.address, {from : owner_1})
     })
 });

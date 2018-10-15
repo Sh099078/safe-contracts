@@ -10,6 +10,10 @@ contract AllowanceQaxhModule is BasicQaxhModule {
 
     mapping (address => mapping (address => uint256)) internal allowances; //mapping user address to token address to allowances
 
+    constructor(address _qaxh) BasicQaxhModule(_qaxh) public {
+        return;
+    }
+
     // GETTERS AND SETTERS
 
     function getAllowance(address user, address token) public view returns (uint256) {

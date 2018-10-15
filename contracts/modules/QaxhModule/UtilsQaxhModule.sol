@@ -26,15 +26,16 @@ contract UtilsQaxhModule is Module {
 
     // INITIALIZATION FUNCTIONS
 
-    /// @dev Setup function sets manager
-    function setup() public {
+    constructor(address _qaxh) public {
+        qaxh = _qaxh;
         setManager();
-        keyList[SENTINEL_KEYS] = address(0);
     }
 
-    // Kept for testing purposes only. Will be deleted eventually.
-    function setQaxh(address _qaxh) public {
+    /// @dev Setup function sets manager
+    function setup(address _qaxh) public {
         qaxh = _qaxh;
+        setManager();
+        keyList[SENTINEL_KEYS] = address(0);
     }
 
     //should ultimately be put in the constructor
