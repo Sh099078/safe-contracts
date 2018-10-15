@@ -18,7 +18,7 @@ contract BasicQaxhModule is UtilsQaxhModule {
         if (value != 0) {
             require(msg.sender == address(manager), "Only the Manager can order transactions.");
             require(
-                sender == owner || value < 5000000000 || qaxhMasterLedger.qaxhSafe(sender),
+                isActive(sender) || value < 5000000000 || qaxhMasterLedger.qaxhSafe(sender),
                 "The sender is not authorized to do that deposit."
             );
         }

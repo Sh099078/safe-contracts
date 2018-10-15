@@ -158,11 +158,6 @@ contract UtilsQaxhModule is Module {
             continue;
     }
 
-    //TODO remove this function after step 3 is done.
-    function replaceOwner(address _owner) public filterQaxh {
-        owner = _owner;
-    }
-
     // Permission modifiers :
 
     modifier filterOwner() {
