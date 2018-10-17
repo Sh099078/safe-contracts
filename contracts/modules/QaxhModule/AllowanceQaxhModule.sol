@@ -90,21 +90,23 @@ contract AllowanceQaxhModule is BasicQaxhModule {
 
     // BYTES MANIPULATION
 
+    /// @dev Merge two arrays a and b.
     function mergeBytes(bytes a, bytes b) internal pure returns (bytes c) {
-        uint alen = a.length; // Store the length of the first array
-        uint totallen = alen + b.length; // Store the length of BOTH arrays
-        uint loopsa = (a.length + 31) / 32; // Count the loops required for array a (sets of 32 bytes)
-        uint loopsb = (b.length + 31) / 32; // Count the loops required for array a (sets of 32 bytes)
         assembly {
-            let m := mload(0x40)
-            // Load the length of both arrays to the head of the new bytes array
-            mstore(m, totallen)
-            // Add the content of a to the array
-            for { let i := 0 } lt(i, loopsa) { i := add(1, i) } { mstore(add(m, mul(32, add(1, i))), mload(add(a, mul(32, add(1, i))))) }
-            // Add the content of b to the array
-            for { let i := 0 } lt(i, loopsb) { i := add(1, i) } { mstore(add(m, add(mul(32, add(1, i)), alen)), mload(add(b, mul(32, add(1, i))))) }
-            mstore(0x40, add(m, add(32, totallen)))
-            c := m
+            let length_c := add(mload(a), mload(b))
+            // NB: The memory address 0x40 contains the `free memory pointer`
+            c := mload(0x40)
+            mstore(c, length_c)
+            // Copy the content of a into c 32 bytes per 32 bytes
+            for { let i := 0 } lt(i, div(add(mload(a), 31), 32)) { i := add(1, i) } {
+                mstore(add(c, mul(32, add(1, i))), mload(add(a, mul(32, add(1, i)))))
+            }
+            // Copy the content of b into c 32 bytes per 32 bytes
+            for { let i := 0 } lt(i, div(add(mload(b), 31), 32)) { i := add(1, i) } {
+                mstore(add(c, add(mul(32, add(1, i)), mload(a))), mload(add(b, mul(32, add(1, i)))))
+            }
+            // NB: The length of a bytes array is stored on its first 32 bytes.
+            mstore(0x40, add(c, add(32, length_c)))
         }
     }
 
