@@ -20,7 +20,6 @@ contract UtilsQaxhModule is Module {
     enum Status { NotAnOwner, Frozen, Active }
     mapping (address => Status) keyStatus;
     mapping (address => address) keyList;
-    uint256 nbKeys; // needed to create a fixed-size array since Solidity can't currently return dynamically-sized arrays.
     address constant SENTINEL_KEYS = address(0x1);
     uint8 constant MAX_KEYS = 10;
 
