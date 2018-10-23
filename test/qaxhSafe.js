@@ -54,10 +54,10 @@ contract('AllowanceQaxhModule', function(accounts) {
         await token.setUp(1000, "Qaxh Coin Test", 18, "EUR")
 
         //module
-        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new(qaxh_address)
+        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new()
 
         // Create Gnosis Safe and Daily Limit Module in one transactions
-        let moduleData = await qaxhModuleMasterCopy.contract.setup.getData(qaxh_address)
+        let moduleData = await qaxhModuleMasterCopy.contract.setup.getData(qaxh_address, qaxhMasterLedger.address)
         let proxyFactoryData = await proxyFactory.contract.createProxy.getData(qaxhModuleMasterCopy.address, moduleData)
         let modulesCreationData = utils.createAndAddModulesData([proxyFactoryData])
         let createAndAddModulesData = createAndAddModules.contract.createAndAddModules.getData(proxyFactory.address, modulesCreationData)
@@ -72,7 +72,6 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         let modules = await gnosisSafe.getModules()
         qaxhModule = AllowanceQaxhModule.at(modules[0])
-        await qaxhModule.setLedger(qaxhMasterLedger.address)
 
         // Second qaxh safe
         // Owner: Accounts[0]
@@ -83,7 +82,6 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         let modules2 = await gnosisSafe2.getModules()
         qaxhModule2 = AllowanceQaxhModule.at(modules2[0])
-        await qaxhModule2.setLedger(qaxhMasterLedger.address)
     })
 
     it('activate, freeze and then delete a key', async () => {
@@ -172,14 +170,6 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         await qaxhModule.activateKey(owner_1, {from : qaxh_address})
         await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
-
-        var log = qaxhModule.Log();
-        log.watch(function(err, result) {console.log("Event log : " + result.args.a.toString() + " , "
-            + result.args.b.toString())});
-
-        var event = qaxhModule.Event();
-        event.watch(function(err, result) {console.log("Event event : " + result.args._address.toString() + " , "
-            + result.args.description)});
 
         //TESTING : setting up the ledger
 

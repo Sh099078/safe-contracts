@@ -9,7 +9,6 @@ contract UtilsQaxhModule is Module {
     // STATE VARIABLES
 
     address internal qaxh = 0xeA41A27F8545d091ED604ac99CE46002eDA3E360;
-    address internal owner;
     QaxhMasterLedger internal qaxhMasterLedger;
 
     /*
@@ -25,21 +24,11 @@ contract UtilsQaxhModule is Module {
 
     // INITIALIZATION FUNCTIONS
 
-    constructor(address _qaxh) public {
-        qaxh = _qaxh;
-        setManager();
-    }
-
     /// @dev Setup function sets manager
-    function setup(address _qaxh) public {
+    function setup(address _qaxh, address _ledger) public {
         qaxh = _qaxh;
-        setManager();
-        keyList[SENTINEL_KEYS] = address(0);
-    }
-
-    //should ultimately be put in the constructor
-    function setLedger(address _ledger) public {
         qaxhMasterLedger = QaxhMasterLedger(_ledger);
+        setManager();
     }
 
     // KEYS MANAGEMENT
@@ -170,23 +159,4 @@ contract UtilsQaxhModule is Module {
         require(msg.sender == qaxh, "This method can only be called by the qaxh address");
         _;
     }
-
-    // Getters and Setters
-
-    function getQaxh() public view returns (address) {
-        return qaxh;
-    }
-
-    //TODO remove this function once step 3 is done.
-    function getOwner() public view returns (address) {
-        return owner;
-    }
-
-    // Event useful to debug
-
-    event Event(address _address, string _description);
-
-    event logging(string _description);
-
-    event Log(uint a, uint b);
 }

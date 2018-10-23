@@ -7,10 +7,6 @@ import "./UtilsQaxhModule.sol";
 /// @author clem
 contract BasicQaxhModule is UtilsQaxhModule {
 
-    constructor(address _qaxh) UtilsQaxhModule(_qaxh) public {
-        return;
-    }
-
     //TODO handle ERC20 tokens transactions with msg.data
     /// @dev Handles Ether received by the safe. The contract execution will revert if it wasn't
     ///      called by its ModuleManager or if the transaction is not authorized, i.e. It is not
