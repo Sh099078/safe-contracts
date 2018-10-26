@@ -39,22 +39,22 @@ contract('AllowanceQaxhModule', function(accounts) {
         lw = await utils.createLightwallet()
 
         // Create Master Copies
-        let proxyFactory = await ProxyFactory.new()
-        let createAndAddModules = await CreateAndAddModules.new()
-        let gnosisSafeMasterCopy = await GnosisSafe.new()
+        let proxyFactory = await ProxyFactory.new({from : qaxh_address})
+        let createAndAddModules = await CreateAndAddModules.new({from : qaxh_address})
+        let gnosisSafeMasterCopy = await GnosisSafe.new({from : qaxh_address})
 
         // Initialize safe master copy
         gnosisSafeMasterCopy.setup([qaxh_address], 1, 0, "0x")
 
         //QaxhMasterLedger
-        qaxhMasterLedger = await QaxhMasterLedger.new(qaxh_address)
+        qaxhMasterLedger = await QaxhMasterLedger.new({from : qaxh_address})
 
         //Create a token to test with and watch for transfers
         token = await HumanStandardToken.new({from : token_creator})
         await token.setUp(1000, "Qaxh Coin Test", 18, "EUR")
 
         //module
-        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new()
+        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new({from : qaxh_address})
 
         // Create Gnosis Safe and Daily Limit Module in one transactions
         let moduleData = await qaxhModuleMasterCopy.contract.setup.getData(qaxh_address, qaxhMasterLedger.address)

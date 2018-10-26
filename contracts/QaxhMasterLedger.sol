@@ -8,8 +8,8 @@ contract QaxhMasterLedger {
 
     mapping (address => bool) private isQaxhSafe;
 
-    constructor(address _qaxh) public {
-        qaxh = _qaxh;
+    constructor() public {
+        qaxh = msg.sender;
     }
 
     modifier filterQaxh {
