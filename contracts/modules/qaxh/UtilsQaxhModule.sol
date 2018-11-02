@@ -8,7 +8,7 @@ contract UtilsQaxhModule is Module {
 
     // STATE VARIABLES
 
-    address internal qaxh = 0xeA41A27F8545d091ED604ac99CE46002eDA3E360;
+    address internal qaxh;
     QaxhMasterLedger internal qaxhMasterLedger;
 
     /*
@@ -26,6 +26,7 @@ contract UtilsQaxhModule is Module {
 
     /// @dev Setup function sets manager
     function setup(address _qaxh, address _ledger) public {
+        require(qaxh == address(0), "QaxhModule.setup() can only be called once");
         qaxh = _qaxh;
         qaxhMasterLedger = QaxhMasterLedger(_ledger);
         setManager();
@@ -158,5 +159,15 @@ contract UtilsQaxhModule is Module {
     modifier filterQaxh() {
         require(msg.sender == qaxh, "This method can only be called by the qaxh address");
         _;
+    }
+
+    // Getters:
+
+    function get_qaxh() public view returns (address) {
+        return qaxh;
+    }
+
+    function get_qaxhMasterLedger() public view returns(address) {
+        return qaxhMasterLedger;
     }
 }
