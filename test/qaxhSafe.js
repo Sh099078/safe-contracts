@@ -213,7 +213,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         //known safe loading the safe
         assert(await qaxhMasterLedger.addSafe(gnosisSafe2.address, {from : qaxh_address}), "lol") //adding second safe to first safe's known safes
         await web3.eth.sendTransaction({from: owner_2, to: gnosisSafe2.address, value: web3.toWei(5, 'ether')}) //loading the second safe
-        await qaxhModule2.sendFromSafe(gnosisSafe.address, web3.toWei(0.1, 'ether'), 0, {from: owner_2}) //loading the first safe from the second safe
+        await qaxhModule2.sendFromSafe(gnosisSafe.address, web3.toWei(0.1, 'ether'), "", 0, {from: owner_2}) //loading the first safe from the second safe
         assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5100000001000000000)
         console.log("   Known safe loading the safe : OK")
 
@@ -223,7 +223,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         //owner withdrawing ether
         let oldBalanceSafe = await web3.eth.getBalance(gnosisSafe.address).toNumber()
         let oldBalanceAccount = await web3.eth.getBalance(owner_2).toNumber()
-        await qaxhModule.sendFromSafe(owner_2, web3.toWei(0.1, 'ether'), 0, {from: owner_1}) //0 is the code for ether
+        await qaxhModule.sendFromSafe(owner_2, web3.toWei(0.1, 'ether'), "", 0, {from: owner_1}) //0 is the code for ether
         assert.equal(oldBalanceSafe - await web3.eth.getBalance(gnosisSafe.address).toNumber() , web3.toWei(0.1, 'ether'))
         assert.equal(await web3.eth.getBalance(owner_2).toNumber() - oldBalanceAccount, web3.toWei(0.1, 'ether'))
         console.log("   Withdrawing ether from safe : OK")
@@ -231,7 +231,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         //non-owner trying to withdraw
         revert = false
         try {
-            await qaxhModule.sendFromSafe(owner_2, web3.toWei(0.1, 'ether'), {from: owner_2})
+            await qaxhModule.sendFromSafe(owner_2, web3.toWei(0.1, 'ether'), "", 0, {from: owner_2})
         } catch (err) {
             revert = true
         }
@@ -244,7 +244,7 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         oldBalanceSafe = await token.balanceOf(gnosisSafe.address)
         oldBalanceAccount = await token.balanceOf(accounts[1])
-        await qaxhModule.sendFromSafe(accounts[1], 2, token.address, {from: owner_1})
+        await qaxhModule.sendFromSafe(accounts[1], 2, "", token.address, {from: owner_1})
         assert.equal(oldBalanceSafe - await token.balanceOf(gnosisSafe.address), 2)
         assert.equal(await token.balanceOf(accounts[1]) - oldBalanceAccount, 2)
         console.log("   Withdrawing token from safe : OK")

@@ -28,13 +28,14 @@ contract BasicQaxhModule is UtilsQaxhModule {
     /// @param to The receiver address.
     /// @param amount The amount of the transaction in Weis.
     /// @param token If set to 0, it is an Ether transaction, else it is a token transaction.
-    function sendFromSafe(address to, uint256 amount, address token) public filterOwner {
+    /// @param data Ignored in case of token transaction. Else, the data field of the transaction.
+    function sendFromSafe(address to, uint256 amount, bytes data, address token) public filterOwner {
         if (token == 0)
-            require(manager.execTransactionFromModule(to, amount, "", Enum.Operation.Call),
+            require(manager.execTransactionFromModule(to, amount, data, Enum.Operation.Call),
                     "Could not execute ether transfer");
         else {
-            bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", to, amount);
-            require(manager.execTransactionFromModule(token, 0, data, Enum.Operation.Call),
+            bytes memory token_transaction = abi.encodeWithSignature("transfer(address,uint256)", to, amount);
+            require(manager.execTransactionFromModule(token, 0, token_transaction, Enum.Operation.Call),
                     "Could not execute token transfer");
         }
     }
