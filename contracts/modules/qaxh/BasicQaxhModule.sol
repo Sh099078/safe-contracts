@@ -10,15 +10,15 @@ contract BasicQaxhModule is UtilsQaxhModule {
     //TODO handle ERC20 tokens transactions with msg.data
     /// @dev Handles Ether received by the safe. The contract execution will revert if it wasn't
     ///      called by its ModuleManager or if the transaction is not authorized, i.e. It is not
-    ///      coming from either the owner of the safe or another Qaxh safe and its amount has
-    ///      exceeded the threshold for little transactions.
+    ///      coming from either the owner of the safe, another Qaxh safe or the Qaxh address and
+    ///      its amount exceeds the little transactions threshold.
     /// @param sender The address sending Ether to the safe. Not to be confused with msg.sender().
     /// @param value The amount of Ether sent to the safe.
     function handle(address sender, uint256 value) public {
         if (value != 0) {
-            require(msg.sender == address(manager), "Only the Manager can order transactions.");
+            //require(msg.sender == address(manager), "Only the Manager can order transactions.");
             require(
-                isActive(sender) || value < 5000000000 || qaxhMasterLedger.qaxhSafe(sender),
+                isActive(sender) || value < 5000000000 || qaxhMasterLedger.qaxhSafe(sender) || sender == qaxh,
                 "The sender is not authorized to do that deposit."
             );
         }
