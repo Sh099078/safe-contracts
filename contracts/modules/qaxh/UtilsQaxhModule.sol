@@ -3,7 +3,8 @@ import "../../Module.sol";
 import "../../QaxhMasterLedger.sol";
 
 /// @title UtilsQaxhModule : all the little things needed to implement  a qaxh safe
-/// @author clem
+/// @author Clémence Gardelle
+/// @author Loup Federico
 contract UtilsQaxhModule is Module {
 
     // STATE VARIABLES

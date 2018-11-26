@@ -8,6 +8,8 @@ const AllowanceQaxhModule = artifacts.require("./modules/QaxhModule/AllowanceQax
 const QaxhMasterLedger = artifacts.require("./QaxhMasterLedger.sol");
 const HumanStandardToken = artifacts.require("./Token/HumanStandardToken.sol");
 
+const nullAddress = /^0x0{40}$/
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -17,9 +19,11 @@ function sleep(ms) {
 
 contract('AllowanceQaxhModule', function(accounts) {
 
-    let qaxh_address = accounts[8]
-    let owner_1 = accounts[7]
-    let owner_2 = accounts[0]
+    let qaxh_address = accounts[9]
+    let owner_1 = accounts[8]
+    let owner_2 = accounts[7]
+    let owner_1_bytename = "0x01"
+    let owner_2_bytename = "0x02"
     let token_creator = owner_2
 
     let gnosisSafe
@@ -51,7 +55,7 @@ contract('AllowanceQaxhModule', function(accounts) {
 
         //Create a token to test with and watch for transfers
         token = await HumanStandardToken.new({from : token_creator})
-        await token.setUp(1000, "Qaxh Coin Test", 18, "EUR")
+        await token.setUp(1000, "Qaxh Coin Test", 18, "EUR", {from : token_creator})
 
         //module
         let qaxhModuleMasterCopy = await AllowanceQaxhModule.new({from : qaxh_address})
@@ -70,8 +74,7 @@ contract('AllowanceQaxhModule', function(accounts) {
             'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe and Filter Module',
         )
 
-        let modules = await gnosisSafe.getModules()
-        qaxhModule = AllowanceQaxhModule.at(modules[0])
+        qaxhModule = AllowanceQaxhModule.at((await gnosisSafe.getModules())[0])
 
         // Second qaxh safe
         // Owner: Accounts[0]
@@ -80,8 +83,10 @@ contract('AllowanceQaxhModule', function(accounts) {
             'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe and Filter Module',
         )
 
-        let modules2 = await gnosisSafe2.getModules()
-        qaxhModule2 = AllowanceQaxhModule.at(modules2[0])
+        qaxhModule2 = AllowanceQaxhModule.at((await gnosisSafe2.getModules())[0])
+
+        await qaxhModule.activateKey(owner_1, {from : qaxh_address})
+        //await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
     })
 
     it('activate, freeze and then delete a key', async () => {
@@ -150,52 +155,63 @@ contract('AllowanceQaxhModule', function(accounts) {
     })
 
     it('list the safe keys per type (active, frozen)', async () => {
+        await qaxhModule.removeKey(owner_1, {from : qaxh_address})
         assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 0)
-        for(i = 0; i < 10; i++)
+        for(i = 0; i < 7; i++)
             await qaxhModule.activateKey(accounts[i], {from : qaxh_address});
 
-        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, false)), 10)
-        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 10)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, false)), 7)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 7)
         assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(false, true)), 0)
 
-        for(i = 0; i < 10; i = i + 2)
+        for(i = 0; i < 7; i = i + 2)
             await qaxhModule.freezeKey(accounts[i], {from : qaxh_address});
 
-        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(false, true)), 5)
-        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, false)), 5)
-        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 10)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(false, true)), 4)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, false)), 3)
+        assert.equal(await qaxhModule.listLength(await qaxhModule.listKeys(true, true)), 7)
+    })
+
+    it('QaxhMasterLedger : add, remove, get and check existence of a Qaxh Safe', async () => {
+        let owner_id = "0x01"
+        let safe_address = "0xaaaaaaaaaabbbbbbbbbbccccccccccdddddddddd"
+        assert(!(await qaxhMasterLedger.isQaxhSafe(safe_address)))
+        // Adding a safe as the Qaxh address:
+        await qaxhMasterLedger.addSafe(owner_id, safe_address, {from : qaxh_address})
+        assert(await qaxhMasterLedger.isQaxhSafe(safe_address))
+        assert.equal(await qaxhMasterLedger.getQaxhSafe(owner_id), safe_address)
+        // Removing a safe with another address than Qaxh:
+        await utils.assertRejects(qaxhMasterLedger.removeSafe(owner_id, {from : owner_1}))
+        // Removing a safe as the Qaxh address:
+        await qaxhMasterLedger.removeSafe(owner_id, {from : qaxh_address})
+        assert(!(await qaxhMasterLedger.isQaxhSafe(safe_address)))
+        // Adding a safe with another address than Qaxh:
+        await utils.assertRejects(qaxhMasterLedger.addSafe(owner_id, safe_address, {from : owner_1}))
+    })
+
+    it('Safe receiving Ethers', async () => {
+        // Receiving Ethers from Qaxh:
+        let balance = web3.eth.getBalance(gnosisSafe.address).toNumber()
+        let big_amount = Number(web3.toWei(0.1, 'Ether'))
+        let little_amount = 1
+        await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe.address, value : big_amount})
+        balance += big_amount
+        assert.equal(balance, web3.eth.getBalance(gnosisSafe.address).toNumber())
+        // Receiving Ethers from owner:
+        await web3.eth.sendTransaction({from : owner_1, to : gnosisSafe.address, value : big_amount})
+        balance = balance + big_amount
+        assert.equal(balance, web3.eth.getBalance(gnosisSafe.address).toNumber())
+        // Receiving Ethers from another safe:
+        // Receiving small amounts of Ethers from unknown address:
+        // Receiving large amounts of Ethers from unverified address:
+    })
+
+    it('Withdrawing Ethers from safe', async() => {
+        // Owner withdrawing Ethers:
+        // Non-owner withdrawing Ethers:
     })
 
     it('every test is here', async () => {
-
-        await qaxhModule.activateKey(owner_1, {from : qaxh_address})
-        await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
-
-        //TESTING : setting up the ledger
-
-        console.log("\n Ledger : \n ")
-
-        //qaxh address adding a safe to the ledger
-        assert(!(await qaxhMasterLedger.qaxhSafe(gnosisSafe2.address)), "initialisation fails")
-        assert(await qaxhMasterLedger.addSafe(gnosisSafe2.address, {from : qaxh_address}), "safe adding fails")
-        assert(await qaxhMasterLedger.qaxhSafe(gnosisSafe2.address), "safe adding doesn't work")
-        console.log("   Adding a safe to the ledger : OK")
-
-        //qaxh address removing a safe from the ledger
-        assert(await qaxhMasterLedger.addSafe(gnosisSafe2.address, {from : qaxh_address}), "lol")
-        assert(await qaxhMasterLedger.removeSafe(gnosisSafe2.address, {from : qaxh_address}), "removing safe fails")
-        assert(!(await qaxhMasterLedger.qaxhSafe(gnosisSafe2.address)), "removing safe doesn't work")
-        console.log("   Removing a safe from the ledger : OK")
-
-        //non-qaxh address trying to remove a safe from the ledger
-        revert = false
-        try {
-            await qaxhMasterLedger.removeSafe(gnosisSafe2.address, {from : owner_2})
-        } catch (err) {
-            revert = true;
-        }
-        assert(revert)
-        console.log("   Addresses others than qaxh can't remove safe from ledger : OK")
 
         //TESTING : loading the safe
         console.log("\n Loading the safe : \n ")
@@ -211,7 +227,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         console.log("   Little payments loading the safe : OK")
 
         //known safe loading the safe
-        assert(await qaxhMasterLedger.addSafe(gnosisSafe2.address, {from : qaxh_address}), "lol") //adding second safe to first safe's known safes
+        assert(await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from : qaxh_address}), "lol") //adding second safe to first safe's known safes
         await web3.eth.sendTransaction({from: owner_2, to: gnosisSafe2.address, value: web3.toWei(5, 'ether')}) //loading the second safe
         await qaxhModule2.sendFromSafe(gnosisSafe.address, web3.toWei(0.1, 'ether'), "", 0, {from: owner_2}) //loading the first safe from the second safe
         assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5100000001000000000)
@@ -271,7 +287,7 @@ contract('AllowanceQaxhModule', function(accounts) {
             await qaxhModule.changeAllowance(gnosisSafe2.address, web3.toWei(0.05, 'ether'), 0, {from: owner_1})
         } catch (err) {
             revert = true
-            await qaxhMasterLedger.addSafe(gnosisSafe2.address, {from: qaxh_address}) //for the later tests
+            await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from: qaxh_address}) //for the later tests
         }
         assert(revert)
         console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
@@ -325,7 +341,7 @@ contract('AllowanceQaxhModule', function(accounts) {
             await qaxhModule.changeAllowance(gnosisSafe2.address, 2, token.address, {from: owner_1})
         } catch (err) {
             revert = true
-            await qaxhMasterLedger.addSafe(gnosisSafe2.address, {from: qaxh_address}) //for the later tests
+            await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from: qaxh_address}) //for the later tests
         }
         assert(revert)
         console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
