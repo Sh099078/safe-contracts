@@ -26,13 +26,11 @@ contract('AllowanceQaxhModule', function(accounts) {
     let owner_1_bytename = "0x01"
     let owner_2_bytename = "0x02"
     let non_owner_bytename = "0x03"
-    let token_creator = owner_2
 
     let gnosisSafe
     let qaxhModule
     let lw //lightWallet
     let qaxhMasterLedger
-    let token
 
     let gnosisSafe2
     let qaxhModule2
@@ -56,8 +54,6 @@ contract('AllowanceQaxhModule', function(accounts) {
         qaxhMasterLedger = await QaxhMasterLedger.new({from : qaxh_address})
 
         //Create a token to test with and watch for transfers
-        token = await HumanStandardToken.new({from : token_creator})
-        await token.setUp(1000, "Qaxh Coin Test", 18, "EUR", {from : token_creator})
 
         //module
         let qaxhModuleMasterCopy = await AllowanceQaxhModule.new({from : qaxh_address})
@@ -215,7 +211,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         assert.equal(balance, web3.eth.getBalance(gnosisSafe.address).toNumber())
         // Receiving large amounts of Ethers from unverified address:
         try {
-            // For some reason, utils.assertRejects doesn't work with that one
+            // utils.assertRejects doesn't work with that one (reason unknown).
             await web3.eth.sendTransaction({from : non_owner, to : gnosisSafe.address, value : big_amount})
             assert(false)
         }
@@ -235,128 +231,58 @@ contract('AllowanceQaxhModule', function(accounts) {
         await utils.assertRejects(qaxhModule.sendFromSafe(owner_2, amount, "", 0, {from : owner_2}))
     })
 
-    it('Sending tokens', async() => {
-        // Sending without allowance:
-        // Sending more than allowance:
-        // Sending with allowance:
+    it('Testing Qaxh Token', async() => {
+        let token_owner = non_owner
+        let token = await HumanStandardToken.new({from : token_owner})
+        // Setting up the token:
+        assert.equal(await token.totalSupply(), 0)
+        await token.setup(1000, "Qaxh Test Token", 18, "QAXH", {from : token_owner})
+        assert.equal(await token.balanceOf(token_owner), 1000)
+        assert.equal(await token.totalSupply(), 1000)
+        // Direct transfers:
+        await token.transfer(owner_1, 400, {from : token_owner})
+        await utils.assertRejects(token.transfer(owner_1, 2000, {from : token_owner}))
+        assert.equal(await token.balanceOf(token_owner), 600)
+        assert.equal(await token.balanceOf(owner_1), 400)
+        // Delegate transfers:
+        await token.approve(owner_2, 200, {from : owner_1})
+        assert.equal(await token.allowance(owner_1, owner_2), 200)
+        await token.transferFrom(owner_1, owner_2, 100, {from : owner_2})
+        assert.equal(await token.allowance(owner_1, owner_2), 100)
+        assert.equal(await token.balanceOf(owner_1), 300)
+        assert.equal(await token.balanceOf(owner_2), 100)
+        await utils.assertRejects(token.transferFrom(owner_1, non_owner, 200, {from : owner_2}))
+        await token.approve(owner_2, 500, {from : owner_1})
+        assert.equal(await token.allowance(owner_1, owner_2), 500)
+        await utils.assertRejects(token.transferFrom(owner_1, non_owner, 500, {from : owner_2}))
     })
 
-    it('every test is here', async () => {
-
-        //owner withdrawing token
-
-        await token.transfer(gnosisSafe.address, 10) //loading the safe
-
-        oldBalanceSafe = await token.balanceOf(gnosisSafe.address)
-        oldBalanceAccount = await token.balanceOf(accounts[1])
-        await qaxhModule.sendFromSafe(accounts[1], 2, "", token.address, {from: owner_1})
-        assert.equal(oldBalanceSafe - await token.balanceOf(gnosisSafe.address), 2)
-        assert.equal(await token.balanceOf(accounts[1]) - oldBalanceAccount, 2)
-        console.log("   Withdrawing token from safe : OK")
-
-        //TESTING : simple allowance system, with ether
-        console.log("\n Simple allowance system (ether) : \n ")
-
-        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, 0), 0)
-
-        //unauthorized user trying to ask for funds
-        revert = false
-        try {
-            await qaxhModule.transferFrom(gnosisSafe2.address, 4000, 0, {from : owner_2})
-        } catch (err) {
-            revert = true
-        }
-        assert(revert)
-        console.log("   Revert if unauthorized user ask for funds : OK")
-
-        //authorizing user who's not a qaxh safe
-        revert = false
-        try {
-            await qaxhMasterLedger.removeSafe(gnosisSafe2.address, {from: qaxh_address})
-            await qaxhModule.changeAllowance(gnosisSafe2.address, web3.toWei(0.05, 'ether'), 0, {from: owner_1})
-        } catch (err) {
-            revert = true
-            await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from: qaxh_address}) //for the later tests
-        }
-        assert(revert)
-        console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
-
-        //authorizing user who's a qaxh safe
-        await qaxhModule.changeAllowance(gnosisSafe2.address, web3.toWei(0.05, 'ether'), 0, {from : owner_1})
-        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, 0), web3.toWei(0.05, 'ether'))
-        console.log("   Changing allowance for an user : OK")
-
-        //authorized user asking for funds under his limit
-        oldBalanceAccount = await web3.eth.getBalance(accounts[1]).toNumber()
-        oldBalanceSafe = await web3.eth.getBalance(gnosisSafe.address).toNumber()
-        await qaxhModule2.askTransferFrom(qaxhModule.address, accounts[1], web3.toWei(0.04, 'ether'), 0, {from : owner_2} )
-        assert.equal(await web3.eth.getBalance(accounts[1]).toNumber() -  oldBalanceAccount,  web3.toWei(0.04, 'ether'))
-        assert.equal(oldBalanceSafe - await web3.eth.getBalance(gnosisSafe.address).toNumber(),  web3.toWei(0.04, 'ether'))
-        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, 0), web3.toWei(0.01, 'ether'))
-        console.log("   Allowed user withdrawing funds : OK")
-
-        //authorized user asking for funds over his limit
-        revert = false
-        try {
-            await qaxhModule2.askTransferFrom(qaxhModule.address, accounts[1], web3.toWei(0.04, 'ether'), 0, {from : owner_2} )
-        } catch (err) {
-            revert = true
-        }
-        assert(revert)
-        console.log("   Revert if user try to go over his limit : OK")
-
-        //cleaning up after tests
-        await qaxhModule.changeAllowance(gnosisSafe2.address, 0, 0, {from : owner_1})
-
-        //TESTING : simple allowance system, with token
-        console.log("\n Simple allowance system (token) : \n ")
-
+    it('Qaxh Safe sending tokens', async() => {
+        let token_owner = non_owner;
+        let totalSupply = 1000
+        let name = "Qaxh Test Token"
+        let decimals = 18
+        let symbol = "EUR"
+        let token = await HumanStandardToken.new({from : token_owner})
+        await token.setup(totalSupply, name, decimals, symbol, {from : token_owner})
+        await token.transfer(gnosisSafe.address, 500, {from : token_owner})
+        // Sending without allowance:
+        await utils.assertRejects(qaxhModule2.askTransferFrom(gnosisSafe.address, owner_2, token.balanceOf(gnosisSafe.address), token.address, {from : owner_2}))
+        // Allowing a non-qaxh-safe address:
+        await utils.assertRejects(qaxhModule.approve(non_owner, 10, token.address))
+        // Setting up the allowance:
+        let allowance = 200;
         assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, token.address), 0)
-
-        //unauthorized user trying to ask for funds
-        revert = false
-        try {
-            await qaxhModule.transferFrom(gnosisSafe2.address, 4000, token.address, {from : owner_2})
-        } catch (err) {
-            revert = true
-        }
-        assert(revert)
-        console.log("   Revert if unauthorized user ask for funds : OK")
-
-        //authorizing user who's not a qaxh safe
-        revert = false
-        try {
-            await qaxhMasterLedger.removeSafe(gnosisSafe2.address, {from: qaxh_address})
-            await qaxhModule.changeAllowance(gnosisSafe2.address, 2, token.address, {from: owner_1})
-        } catch (err) {
-            revert = true
-            await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from: qaxh_address}) //for the later tests
-        }
-        assert(revert)
-        console.log("   Revert if owner tries to authorized a non-qaxh safe user : OK")
-
-        //authorizing user who's a qaxh safe
-        await qaxhModule.changeAllowance(gnosisSafe2.address, 10, token.address, {from : owner_1})
-        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, token.address), 10)
-        console.log("   Changing allowance for an user : OK")
-
-        //authorized user asking for funds under his limit
-        oldBalanceAccount = await token.balanceOf(accounts[1])
-        oldBalanceSafe = await token.balanceOf(gnosisSafe.address)
-        await qaxhModule2.askTransferFrom(qaxhModule.address, accounts[1], 7, token.address, {from : owner_2} )
-        assert.equal(await token.balanceOf(accounts[1]) -  oldBalanceAccount, 7)
-        assert.equal(oldBalanceSafe - await token.balanceOf(gnosisSafe.address), 7)
-        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, token.address), 3)
-        console.log("   Allowed user withdrawing funds : OK")
-
-        //authorized user asking for funds over his limit
-        revert = false
-        try {
-            await qaxhModule2.askTransferFrom(qaxhModule.address, accounts[1], 4, token.address, {from : owner_2} )
-        } catch (err) {
-            revert = true
-        }
-        assert(revert)
-        console.log("   Revert if user try to go over his limit : OK")
+        await qaxhModule.approve(gnosisSafe2.address, 2 * allowance, token.address, {from : owner_1})
+        await qaxhModule.approve(gnosisSafe2.address, allowance, token.address, {from : owner_1})
+        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, token.address), allowance)
+        // Delegate transfers:
+        await qaxhModule2.askTransferFrom(gnosisSafe.address, gnosisSafe2.address, allowance - 50, token.address, {from : owner_2})
+        await utils.assertRejects(qaxhModule2.askTransferFrom(gnosisSafe.address, gnosisSafe2.address, allowance * 2, token.address, {from : owner_2}))
+        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, token.address), 50)
+        assert.equal(await token.balanceOf(gnosisSafe2.address), allowance - 50)
+        await qaxhModule2.askTransferFrom(gnosisSafe.address, gnosisSafe2.address, 50, token.address, {from : owner_2})
+        assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, token.address), 0)
+        assert.equal(await token.balanceOf(gnosisSafe2.address), allowance)
     })
 });
