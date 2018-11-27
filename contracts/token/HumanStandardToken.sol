@@ -40,7 +40,7 @@ contract HumanStandardToken is StandardToken {
         creator = msg.sender;
     }
 
-    function setUp(uint256 _initialAmount, string _name, uint8 _decimals, string _symbol) public {
+    function setup(uint256 _initialAmount, string _name, uint8 _decimals, string _symbol) public {
         require(msg.sender == creator);
         require(!alreadySetUp);
         balances[msg.sender] = _initialAmount;               // Give the creator all initial tokens

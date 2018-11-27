@@ -37,8 +37,6 @@ contract StandardToken is Token {
     uint256 public totalSupply;
 
     function transfer(address _to, uint256 _value) external returns (bool) {
-        if (balances[msg.sender] < _value)
-            return false;
         balances[msg.sender] = balances[msg.sender].sub(_value);
         balances[_to] = balances[_to].add(_value);
         emit Transfer(msg.sender, _to, _value);
@@ -46,8 +44,6 @@ contract StandardToken is Token {
     }
 
     function transferFrom(address _from, address _to, uint256 _value) external returns (bool) {
-        if (allowed[_from][msg.sender] < _value || balances[_from] < _value)
-            return false;
         balances[_from] = balances[_from].sub(_value);
         balances[_to] = balances[_to].add(_value);
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
