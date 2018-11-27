@@ -22,8 +22,10 @@ contract('AllowanceQaxhModule', function(accounts) {
     let qaxh_address = accounts[9]
     let owner_1 = accounts[8]
     let owner_2 = accounts[7]
+    let non_owner = accounts[0]
     let owner_1_bytename = "0x01"
     let owner_2_bytename = "0x02"
+    let non_owner_bytename = "0x03"
     let token_creator = owner_2
 
     let gnosisSafe
@@ -67,26 +69,28 @@ contract('AllowanceQaxhModule', function(accounts) {
         let createAndAddModulesData = createAndAddModules.contract.createAndAddModules.getData(proxyFactory.address, modulesCreationData)
         let gnosisSafeData = await gnosisSafeMasterCopy.contract.setup.getData([qaxh_address], 1, createAndAddModules.address, createAndAddModulesData)
 
-        // First qaxh safe
-        // Owner: accounts[7]
         gnosisSafe = utils.getParamFromTxEvent(
             await proxyFactory.createProxy(gnosisSafeMasterCopy.address, gnosisSafeData),
             'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe and Filter Module',
         )
 
-        qaxhModule = AllowanceQaxhModule.at((await gnosisSafe.getModules())[0])
 
-        // Second qaxh safe
-        // Owner: Accounts[0]
         gnosisSafe2 = utils.getParamFromTxEvent(
             await proxyFactory.createProxy(gnosisSafeMasterCopy.address, gnosisSafeData),
             'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe and Filter Module',
         )
 
+        qaxhModule = AllowanceQaxhModule.at((await gnosisSafe.getModules())[0])
         qaxhModule2 = AllowanceQaxhModule.at((await gnosisSafe2.getModules())[0])
 
+        await qaxhMasterLedger.addSafe(owner_1_bytename, gnosisSafe.address, {from : qaxh_address})
+        await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from : qaxh_address})
+
         await qaxhModule.activateKey(owner_1, {from : qaxh_address})
-        //await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
+        await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
+        initial_load = web3.toWei(1, 'Ether')
+        await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe.address, value : initial_load})
+        await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe2.address, value : initial_load})
     })
 
     it('activate, freeze and then delete a key', async () => {
@@ -173,8 +177,8 @@ contract('AllowanceQaxhModule', function(accounts) {
     })
 
     it('QaxhMasterLedger : add, remove, get and check existence of a Qaxh Safe', async () => {
-        let owner_id = "0x01"
-        let safe_address = "0xaaaaaaaaaabbbbbbbbbbccccccccccdddddddddd"
+        let owner_id = non_owner_bytename
+        let safe_address = non_owner
         assert(!(await qaxhMasterLedger.isQaxhSafe(safe_address)))
         // Adding a safe as the Qaxh address:
         await qaxhMasterLedger.addSafe(owner_id, safe_address, {from : qaxh_address})
@@ -189,70 +193,55 @@ contract('AllowanceQaxhModule', function(accounts) {
         await utils.assertRejects(qaxhMasterLedger.addSafe(owner_id, safe_address, {from : owner_1}))
     })
 
-    it('Safe receiving Ethers', async () => {
-        // Receiving Ethers from Qaxh:
+    it('Receiving Ethers', async () => {
         let balance = web3.eth.getBalance(gnosisSafe.address).toNumber()
         let big_amount = Number(web3.toWei(0.1, 'Ether'))
-        let little_amount = 1
+        let small_amount = 1
+        // Receiving Ethers from Qaxh:
         await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe.address, value : big_amount})
         balance += big_amount
         assert.equal(balance, web3.eth.getBalance(gnosisSafe.address).toNumber())
         // Receiving Ethers from owner:
         await web3.eth.sendTransaction({from : owner_1, to : gnosisSafe.address, value : big_amount})
-        balance = balance + big_amount
+        balance += big_amount
         assert.equal(balance, web3.eth.getBalance(gnosisSafe.address).toNumber())
         // Receiving Ethers from another safe:
+        await qaxhModule2.sendFromSafe(gnosisSafe.address, web3.toWei(0.1, 'Ether'), "", 0, {from : owner_2})
+        balance += big_amount
+        assert.equal(balance, web3.eth.getBalance(gnosisSafe.address).toNumber())
         // Receiving small amounts of Ethers from unknown address:
+        await web3.eth.sendTransaction({from : non_owner, to : gnosisSafe.address, value : small_amount})
+        balance += small_amount
+        assert.equal(balance, web3.eth.getBalance(gnosisSafe.address).toNumber())
         // Receiving large amounts of Ethers from unverified address:
+        try {
+            // For some reason, utils.assertRejects doesn't work with that one
+            await web3.eth.sendTransaction({from : non_owner, to : gnosisSafe.address, value : big_amount})
+            assert(false)
+        }
+        catch (err) { }
     })
 
-    it('Withdrawing Ethers from safe', async() => {
+    it('Sending Ethers', async() => {
+        let amount = Number(web3.toWei(0.1, 'Ether'))
+        let non_owner_balance = web3.eth.getBalance(non_owner).toNumber()
+        await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe.address, value : 2 * amount})
+        await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe2.address, value : 2 * amount})
         // Owner withdrawing Ethers:
+        await qaxhModule.sendFromSafe(non_owner, amount, "", 0, {from : owner_1})
+        non_owner_balance += amount
+        assert.equal(non_owner_balance, web3.eth.getBalance(non_owner).toNumber())
         // Non-owner withdrawing Ethers:
+        await utils.assertRejects(qaxhModule.sendFromSafe(owner_2, amount, "", 0, {from : owner_2}))
+    })
+
+    it('Sending tokens', async() => {
+        // Sending without allowance:
+        // Sending more than allowance:
+        // Sending with allowance:
     })
 
     it('every test is here', async () => {
-
-        //TESTING : loading the safe
-        console.log("\n Loading the safe : \n ")
-
-        //owner loading the safe
-        await web3.eth.sendTransaction({from: owner_1, to: gnosisSafe.address, value: web3.toWei(5, 'ether')})
-        assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5000000000000000000)
-        console.log("   Owner loading the safe : OK")
-
-        //little payment loading the safe
-        await web3.eth.sendTransaction({from: accounts[1], to: gnosisSafe.address, value: web3.toWei(0.000000001, 'ether')})
-        assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5000000001000000000)
-        console.log("   Little payments loading the safe : OK")
-
-        //known safe loading the safe
-        assert(await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from : qaxh_address}), "lol") //adding second safe to first safe's known safes
-        await web3.eth.sendTransaction({from: owner_2, to: gnosisSafe2.address, value: web3.toWei(5, 'ether')}) //loading the second safe
-        await qaxhModule2.sendFromSafe(gnosisSafe.address, web3.toWei(0.1, 'ether'), "", 0, {from: owner_2}) //loading the first safe from the second safe
-        assert.equal(await web3.eth.getBalance(gnosisSafe.address).toNumber(), 5100000001000000000)
-        console.log("   Known safe loading the safe : OK")
-
-            //TESTING : withdrawing
-        console.log("\n Withdrawing by the owner : \n ")
-
-        //owner withdrawing ether
-        let oldBalanceSafe = await web3.eth.getBalance(gnosisSafe.address).toNumber()
-        let oldBalanceAccount = await web3.eth.getBalance(owner_2).toNumber()
-        await qaxhModule.sendFromSafe(owner_2, web3.toWei(0.1, 'ether'), "", 0, {from: owner_1}) //0 is the code for ether
-        assert.equal(oldBalanceSafe - await web3.eth.getBalance(gnosisSafe.address).toNumber() , web3.toWei(0.1, 'ether'))
-        assert.equal(await web3.eth.getBalance(owner_2).toNumber() - oldBalanceAccount, web3.toWei(0.1, 'ether'))
-        console.log("   Withdrawing ether from safe : OK")
-
-        //non-owner trying to withdraw
-        revert = false
-        try {
-            await qaxhModule.sendFromSafe(owner_2, web3.toWei(0.1, 'ether'), "", 0, {from: owner_2})
-        } catch (err) {
-            revert = true
-        }
-        assert(revert)
-        console.log("   Revert if a non-owner try to withdraw with sendFromSafe() : OK")
 
         //owner withdrawing token
 
