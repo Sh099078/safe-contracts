@@ -14,9 +14,6 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// A qaxh safe is a gnosis safe personal edition whose only owner is the qaxh address
-// and who has a QaxhModule enabled (and only that)
-
 contract('AllowanceQaxhModule', function(accounts) {
 
     let qaxh_address = accounts[9]
@@ -233,10 +230,8 @@ contract('AllowanceQaxhModule', function(accounts) {
 
     it('Testing Qaxh Token', async() => {
         let token_owner = non_owner
-        let token = await HumanStandardToken.new({from : token_owner})
         // Setting up the token:
-        assert.equal(await token.totalSupply(), 0)
-        await token.setup(1000, "Qaxh Test Token", 18, "QAXH", {from : token_owner})
+        let token = await HumanStandardToken.new(1000, "Qaxh Test Token", 18, "QAXH", {from : token_owner})
         assert.equal(await token.balanceOf(token_owner), 1000)
         assert.equal(await token.totalSupply(), 1000)
         // Direct transfers:
@@ -263,8 +258,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         let name = "Qaxh Test Token"
         let decimals = 18
         let symbol = "EUR"
-        let token = await HumanStandardToken.new({from : token_owner})
-        await token.setup(totalSupply, name, decimals, symbol, {from : token_owner})
+        let token = await HumanStandardToken.new(totalSupply, name, decimals, symbol, {from : token_owner})
         await token.transfer(gnosisSafe.address, 500, {from : token_owner})
         // Sending without allowance:
         await utils.assertRejects(qaxhModule2.askTransferFrom(gnosisSafe.address, owner_2, token.balanceOf(gnosisSafe.address), token.address, {from : owner_2}))
