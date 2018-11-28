@@ -1,19 +1,36 @@
 pragma solidity 0.4.24;
 import "../../Module.sol";
-import "./QaxhUtils.sol";
+import "./IdentityManager.sol";
 import "./KeyManager.sol";
+import "./QaxhUtils.sol";
 
 /// @title QaxhModule - A contract that allows its associated Gnosis Safe to be Qaxh compliant if owned by the Qaxh address.
 /// @author Clémence Gardelle
 /// @author Loup Federico
-contract QaxhModule is Module, KeyManager {
+contract QaxhModule is Module, KeyManager, IdentityManager {
 
     /// @dev Setup qaxh and QaxhMasterLedger addresses references upon module creation.
     function setup(address _qaxh, address _ledger) public {
         require(qaxh == address(0), "QaxhModule.setup() can only be called once");
         setupUtils(_qaxh, _ledger);
         setManager();
+        //TODO Add setupIdentity call once the definitive identity fields are accepted
     }
+
+    /// @dev Setup the QaxhModule identity if tx.origin has the appropriate rights.
+    function callSetupIdentity(string _QI_hash, string _QE_hash, uint8 _eIDAS) public filterQaxh {
+        setupIdentity(_QI_hash, _QE_hash, _eIDAS);
+    }
+
+    // AUTHENTICATION PROCESS
+
+    /// @dev If all conditions are met, emit the countersignature event containing the Qaxh client's public key.
+    ///      Only an active key can accept the safe identity.
+    function acceptIdentity() public filterOwner {
+        certifyIdentity();
+    }
+
+    // SENDING AND RECEIVING ETHERS AND TOKENS
 
     /// @dev Handle Ether received by the safe. The contract execution will revert if it wasn't
     ///      called by its ModuleManager or if the transaction is not authorized, i.e. It is not
