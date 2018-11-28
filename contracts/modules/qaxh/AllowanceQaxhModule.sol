@@ -49,7 +49,6 @@ contract AllowanceQaxhModule is BasicQaxhModule {
     /// @param token Deployment address of the ERC20 token.
     function askTransferFrom(ModuleManager sender, address to, uint256 amount, address token) public filterOwner {
         address sender_qaxh_module = sender.getModules()[0];
-        //require(sender_qaxh_module.transferFrom(to, amount, token));
         bytes memory data = abi.encodeWithSignature("transferFrom(address,uint256,address)", to, amount, token);
         require(manager.execTransactionFromModule(sender_qaxh_module, 0, data, Enum.Operation.Call), "askTransferFrom: transferFrom call failed");
     }

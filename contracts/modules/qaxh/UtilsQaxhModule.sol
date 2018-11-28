@@ -124,7 +124,7 @@ contract UtilsQaxhModule is Module {
     /// @param frozen Set it to true to list frozen keys.
     function listKeys(bool active, bool frozen) public view returns (address[MAX_KEYS] keys) {
         uint8 index;
-        for(address key = keyList[SENTINEL_KEYS]; key != address(0) && index < MAX_KEYS; key = keyList[key]){
+        for(address key = keyList[SENTINEL_KEYS]; key != address(0) && index < MAX_KEYS; key = keyList[key]) {
             if ((keyStatus[key] == Status.Frozen && frozen) || (keyStatus[key] == Status.Active && active)) {
                 keys[index] = key;
                 index++;
@@ -133,9 +133,9 @@ contract UtilsQaxhModule is Module {
         return keys;
     }
 
-    // Functions used by the testsuite (to be removed in prod):
+    // UTILITY FUNCTIONS
 
-    /// @dev Checks whether a key is present in keyList.
+    /// @dev Return true if `key` is present in `keyList`.
     function isInKeyList(address _key) public view returns (bool) {
         address curr = SENTINEL_KEYS;
         while (curr != _key && curr != address(0))
@@ -143,13 +143,13 @@ contract UtilsQaxhModule is Module {
         return curr == _key;
     }
 
-    /// @dev Returns the number of elements in the list before the first address(0).
+    /// @dev Return the number of elements in the list before the first null address.
     function listLength(address[MAX_KEYS] list) public pure returns (uint256 length) {
         for(length = 0; length < MAX_KEYS && list[length] != address(0); length++)
             continue;
     }
 
-    // Permission modifiers :
+    // MODIFIERS
 
     modifier filterOwner() {
         require(keyStatus[msg.sender] == Status.Active,
@@ -162,7 +162,7 @@ contract UtilsQaxhModule is Module {
         _;
     }
 
-    // Getters:
+    // GETTERS
 
     function get_qaxh() public view returns (address) {
         return qaxh;
