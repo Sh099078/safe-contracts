@@ -1,14 +1,21 @@
 pragma solidity 0.4.24;
-import "./UtilsQaxhModule.sol";
+import "../../Module.sol";
+import "./QaxhUtils.sol";
+import "./KeyManager.sol";
 
+/// @title QaxhModule - A contract that allows its associated Gnosis Safe to be Qaxh compliant if owned by the Qaxh address.
+/// @author Clémence Gardelle
+/// @author Loup Federico
+contract QaxhModule is Module, KeyManager {
 
-/// @title BasicQaxhSafe : implement the basic function of a qaxh safe :
-///        owner withdrawing money and secure deposits.
-/// @author clem
-contract BasicQaxhModule is UtilsQaxhModule {
+    /// @dev Setup qaxh and QaxhMasterLedger addresses references upon module creation.
+    function setup(address _qaxh, address _ledger) public {
+        require(qaxh == address(0), "QaxhModule.setup() can only be called once");
+        setupUtils(_qaxh, _ledger);
+        setManager();
+    }
 
-    //TODO handle ERC20 tokens transactions with msg.data
-    /// @dev Handles Ether received by the safe. The contract execution will revert if it wasn't
+    /// @dev Handle Ether received by the safe. The contract execution will revert if it wasn't
     ///      called by its ModuleManager or if the transaction is not authorized, i.e. It is not
     ///      coming from either the owner of the safe, another Qaxh safe or the Qaxh address and
     ///      its amount exceeds the little transactions threshold.
@@ -24,7 +31,7 @@ contract BasicQaxhModule is UtilsQaxhModule {
         }
     }
 
-    /// @dev Handles Ether and ERC20 token transactions emitted by the safe.
+    /// @dev Ask the GnosisSafe to send Ether or ERC20 tokens and revert on failure.
     /// @param to The receiver address.
     /// @param amount The amount of the transaction in Weis.
     /// @param token If set to 0, it is an Ether transaction, else it is a token transaction.

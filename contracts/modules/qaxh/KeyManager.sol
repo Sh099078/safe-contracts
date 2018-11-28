@@ -1,41 +1,18 @@
 pragma solidity 0.4.24;
-import "../../Module.sol";
-import "../../QaxhMasterLedger.sol";
+import "./QaxhUtils.sol";
 
-/// @title UtilsQaxhModule : all the little things needed to implement  a qaxh safe
-/// @author Clémence Gardelle
+/// @title KeyManager - A contract that manages owner keys associated to a Qaxh Module.
 /// @author Loup Federico
-contract UtilsQaxhModule is Module {
-
-    // STATE VARIABLES
-
-    address internal qaxh;
-    QaxhMasterLedger internal qaxhMasterLedger;
-
-    /*
-     * keyStatus: Tells for a given address its status.
-     * keyList: A linked list that contains all the keys of the safe.
-     */
+contract KeyManager is QaxhUtils {
 
     enum Status { NotAnOwner, Frozen, Active }
     mapping (address => Status) keyStatus;
     mapping (address => address) keyList;
+
     address constant SENTINEL_KEYS = address(0x1);
     uint8 constant MAX_KEYS = 10;
 
-    // INITIALIZATION FUNCTIONS
-
-    /// @dev Setup function sets manager
-    function setup(address _qaxh, address _ledger) public {
-        require(qaxh == address(0), "QaxhModule.setup() can only be called once");
-        qaxh = _qaxh;
-        qaxhMasterLedger = QaxhMasterLedger(_ledger);
-        setManager();
-    }
-
-    // KEYS MANAGEMENT
-
-    // Activate, freeze and remove keys :
+    // ACTIVATE, FREEZE AND REMOVE KEYS
 
     /// @dev Activate the key given as a parameter. It can be called by:
     ///         1.) Any active key.
@@ -58,7 +35,6 @@ contract UtilsQaxhModule is Module {
             keyList[SENTINEL_KEYS] = _key;
         }
         keyStatus[_key] = Status.Active;
-        //assert(this.isInKeyList(_key) == true);
     }
 
     /// @dev Freeze the key given as a parameter. It can be called by :
@@ -94,7 +70,9 @@ contract UtilsQaxhModule is Module {
         assert(this.isInKeyList(_key) == false);
     }
 
-    /// @dev Checks wether a key is valid or not, i.e. if it is suitable to
+    // UTILITY FUNCTIONS
+
+    /// @dev Check wether a key is valid or not, i.e. if it is suitable to
     ///      be added to the QaxhSafe. Any key is valid, except :
     ///         1.) The 0x0 address (for implementation reasons).
     ///         2.) The SENTINEL_KEYS address (for implementation reasons).
@@ -116,7 +94,7 @@ contract UtilsQaxhModule is Module {
         return keyStatus[_key] == Status.NotAnOwner;
     }
 
-    /// @dev Returns a list of the keys added to the safe of the selected types.
+    /// @dev Return a list of the keys added to the safe of the selected types.
     ///      NB. This functions returns at most MAX_KEYS even though the safe might have more.
     ///      The reason for that is that at the moment of its implementation you couldn't return
     ///      dynamic arrays in Solidity. If you need to return more keys, increase MAX_KEYS accordingly.
@@ -132,8 +110,6 @@ contract UtilsQaxhModule is Module {
         }
         return keys;
     }
-
-    // UTILITY FUNCTIONS
 
     /// @dev Return true if `key` is present in `keyList`.
     function isInKeyList(address _key) public view returns (bool) {
@@ -155,20 +131,5 @@ contract UtilsQaxhModule is Module {
         require(keyStatus[msg.sender] == Status.Active,
                 "This method can only be called by the owner of the safe");
         _;
-    }
-
-    modifier filterQaxh() {
-        require(msg.sender == qaxh, "This method can only be called by the qaxh address");
-        _;
-    }
-
-    // GETTERS
-
-    function get_qaxh() public view returns (address) {
-        return qaxh;
-    }
-
-    function get_qaxhMasterLedger() public view returns(address) {
-        return qaxhMasterLedger;
     }
 }

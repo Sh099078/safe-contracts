@@ -1,19 +1,15 @@
 pragma solidity 0.4.24;
-import "./BasicQaxhModule.sol";
+import "./QaxhModule.sol";
 
 
-/// @title AllowanceQaxhSafe : Allows authorized Qaxh safes to withdraw tokens from one another.
+/// @title AllowanceQaxhSafe - A QaxhModule extension that handles debits between Qaxh Safes.
 /// @author Clémence Gardelle
 /// @author Loup Federico
-
-contract AllowanceQaxhModule is BasicQaxhModule {
+contract AllowanceQaxhModule is QaxhModule {
 
     // Qaxh safe => Token address => Allowance of the safe for that token
     mapping (address => mapping (address => uint256)) internal allowances;
 
-    // GETTERS AND SETTERS
-
-    //TODO REMOVE after updating testsuite
     function getAllowance(address user, address token) public view returns (uint256) {
         return allowances[user][token];
     }
