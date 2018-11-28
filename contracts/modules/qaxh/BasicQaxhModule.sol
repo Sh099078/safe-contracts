@@ -16,7 +16,7 @@ contract BasicQaxhModule is UtilsQaxhModule {
     /// @param value The amount of Ether sent to the safe.
     function handle(address sender, uint256 value) public {
         if (value != 0) {
-            //require(msg.sender == address(manager), "Only the Manager can order transactions.");
+            require(msg.sender == address(manager), "Only the Manager can order transactions.");
             require(
                 isActive(sender) || value < 5000000000 || qaxhMasterLedger.qaxhSafe(sender) || sender == qaxh,
                 "The sender is not authorized to do that deposit."
