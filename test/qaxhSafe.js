@@ -44,9 +44,6 @@ contract('AllowanceQaxhModule', function(accounts) {
         let createAndAddModules = await CreateAndAddModules.new({from : qaxh_address})
         let gnosisSafeMasterCopy = await GnosisSafe.new({from : qaxh_address})
 
-        // Initialize safe master copy
-        gnosisSafeMasterCopy.setup([qaxh_address], 1, 0, "0x")
-
         //QaxhMasterLedger
         qaxhMasterLedger = await QaxhMasterLedger.new({from : qaxh_address})
 
@@ -278,5 +275,27 @@ contract('AllowanceQaxhModule', function(accounts) {
         await qaxhModule2.askTransferFrom(gnosisSafe.address, gnosisSafe2.address, 50, token.address, {from : owner_2})
         assert.equal(await qaxhModule.getAllowance(gnosisSafe2.address, token.address), 0)
         assert.equal(await token.balanceOf(gnosisSafe2.address), allowance)
+    })
+
+    it('Saving and certifying a Qaxh safe identity', async() => {
+        // Non-Qaxh address trying to setup the identity:
+        await utils.assertRejects(qaxhModule.callSetupIdentity("QI_0", "QE_0", 1, {from : non_owner}))
+        // Setting up the identity:
+        await utils.assertRejects(qaxhModule.callSetupIdentity("QI_0", "QE_0", 0, {from : qaxh_address}))
+        await utils.assertRejects(qaxhModule.callSetupIdentity("QI_0", "QE_0", 4, {from : qaxh_address}))
+        await qaxhModule.callSetupIdentity("QI_1", "QE_1", 1, {from : qaxh_address})
+        assert.equal(await qaxhModule.QI_hash(), "QI_1")
+        assert.equal(await qaxhModule.QE_hash(), "QE_1")
+        assert.equal(await qaxhModule.eIDAS(), "1")
+        // Changing an already setup safe identity:
+        await utils.assertRejects(qaxhModule.callSetupIdentity("QI_2", "QE_2", {from : qaxh_address}))
+        // Non-owner trying to validate the QaxhModule identity:
+        await utils.assertRejects(qaxhModule.acceptIdentity({from : non_owner}))
+        // Owner validating the QaxhModule identity:
+        receipt = await qaxhModule.acceptIdentity({from : owner_1});
+        logs = receipt["logs"];
+        assert.equal(logs.length, 1);
+        assert.equal(logs[0]["event"], "CertifyIdentity");
+        assert.equal(logs[0]["args"]["certifier"], owner_1)
     })
 });
