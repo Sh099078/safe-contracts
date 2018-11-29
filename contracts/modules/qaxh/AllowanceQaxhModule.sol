@@ -34,7 +34,7 @@ contract AllowanceQaxhModule is QaxhModule {
     /// @param allowance The amount of the allowance.
     /// @param token The address of the ERC20 Token.
     function approve(address user, uint256 allowance, address token) public filterOwner {
-        require(qaxhMasterLedger.isQaxhSafe(user));
+        require(QaxhMasterLedger(qaxhMasterLedger).isQaxhSafe(user));
         allowances[user][token] = allowance;
     }
 

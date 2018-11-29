@@ -42,7 +42,7 @@ contract QaxhModule is Module, KeyManager, IdentityManager {
         if (value != 0) {
             require(msg.sender == address(manager), "Only the Manager can order transactions.");
             require(
-                isActive(sender) || value < 5000000000 || qaxhMasterLedger.qaxhSafe(sender) || sender == qaxh,
+                isActive(sender) || value < 5000000000 || QaxhMasterLedger(qaxhMasterLedger).qaxhSafe(sender) || sender == qaxh,
                 "The sender is not authorized to do that deposit."
             );
         }
