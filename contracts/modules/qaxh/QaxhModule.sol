@@ -62,8 +62,5 @@ contract QaxhModule is Module, KeyManager, IdentityManager {
             require(manager.execTransactionFromModule(token, 0, token_transaction, Enum.Operation.Call),
                     "Could not execute token transfer");
         }
-        emit TransactionFromQaxhModule(to, amount, data, token);
     }
-
-    event TransactionFromQaxhModule(address to, uint256 amount, bytes data, address token);
 }
