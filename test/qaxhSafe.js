@@ -14,20 +14,38 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-contract('AllowanceQaxhModule', function(accounts) {
 
-    let qaxh_address = accounts[9]
-    let owner_1 = accounts[8]
-    let owner_2 = accounts[7]
-    let non_owner = accounts[0]
-    let owner_1_bytename = "0x01"
-    let owner_2_bytename = "0x02"
-    let non_owner_bytename = "0x03"
+contract('AllowanceQaxhModule', function(accounts) {
+    // Constant values:
+    const qaxh_address = accounts[9]
+    const owner_1 = accounts[8]
+    const owner_2 = accounts[7]
+    const non_owner = accounts[0]
+    const owner_1_bytename = "0x01"
+    const owner_2_bytename = "0x02"
+    const  non_owner_bytename = "0x03"
+
+    // Unique contracts (mastercopies and utility contracts):
+    let qaxhMasterLedger
+    let proxyFactory
+    let createAndAddModules
+    let gnosisSafeMasterCopy
+    let qaxhModuleMasterCopy
+
+    let setup = false
+
+    // Deploy the mastercopies and libraries
+    async function setupContracts() {
+        if (setup) { return; }
+        proxyFactory = await ProxyFactory.new({from : qaxh_address})
+        createAndAddModules = await CreateAndAddModules.new({from : qaxh_address})
+        gnosisSafeMasterCopy = await GnosisSafe.new({from : qaxh_address})
+        qaxhModuleMasterCopy = await AllowanceQaxhModule.new({from : qaxh_address})
+        setup = true
+    }
 
     let gnosisSafe
     let qaxhModule
-    let lw //lightWallet
-    let qaxhMasterLedger
 
     let gnosisSafe2
     let qaxhModule2
@@ -36,21 +54,9 @@ contract('AllowanceQaxhModule', function(accounts) {
 
     beforeEach(async function () {
 
-        // Create lightwallet
-        lw = await utils.createLightwallet()
+        await setupContracts()
 
-        // Create Master Copies
-        let proxyFactory = await ProxyFactory.new({from : qaxh_address})
-        let createAndAddModules = await CreateAndAddModules.new({from : qaxh_address})
-        let gnosisSafeMasterCopy = await GnosisSafe.new({from : qaxh_address})
-
-        //QaxhMasterLedger
         qaxhMasterLedger = await QaxhMasterLedger.new({from : qaxh_address})
-
-        //Create a token to test with and watch for transfers
-
-        //module
-        let qaxhModuleMasterCopy = await AllowanceQaxhModule.new({from : qaxh_address})
 
         // Create Gnosis Safe and Daily Limit Module in one transactions
         let moduleData = await qaxhModuleMasterCopy.contract.setup.getData(qaxh_address, qaxhMasterLedger.address)
@@ -64,7 +70,6 @@ contract('AllowanceQaxhModule', function(accounts) {
             'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe and Filter Module',
         )
 
-
         gnosisSafe2 = utils.getParamFromTxEvent(
             await proxyFactory.createProxy(gnosisSafeMasterCopy.address, gnosisSafeData),
             'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe and Filter Module',
@@ -76,11 +81,12 @@ contract('AllowanceQaxhModule', function(accounts) {
         await qaxhMasterLedger.addSafe(owner_1_bytename, gnosisSafe.address, {from : qaxh_address})
         await qaxhMasterLedger.addSafe(owner_2_bytename, gnosisSafe2.address, {from : qaxh_address})
 
-        await qaxhModule.activateKey(owner_1, {from : qaxh_address})
-        await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
         initial_load = web3.toWei(1, 'Ether')
         await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe.address, value : initial_load})
         await web3.eth.sendTransaction({from : qaxh_address, to : gnosisSafe2.address, value : initial_load})
+
+        await qaxhModule.activateKey(owner_1, {from : qaxh_address})
+        await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
     })
 
     it('activate, freeze and then delete a key', async () => {
