@@ -8,8 +8,10 @@ module.exports = {
       host: "localhost",
       port: 7545,
       network_id: "*", // Match any network id
-      gas: 4600000
+      gas: 7000000,
+      gasPrice: 6000000000 // 6 Gwei
     },
+
     rinkeby: {
       provider: function() {
                   return new HDWalletProvider(mnemonic, 'https://rinkeby.infura.io/');
@@ -24,7 +26,7 @@ module.exports = {
                 },
       network_id: '1',
       gas: 6700000,
-      gasPrice: 25000000000, // 25 Gwei
+      gasPrice: 6000000000, // 6 Gwei
     }
   },
   solc: {
