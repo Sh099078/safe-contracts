@@ -23,7 +23,7 @@ contract('AllowanceQaxhModule', function(accounts) {
     const non_owner = accounts[0]
     const owner_1_bytename = "0x01"
     const owner_2_bytename = "0x02"
-    const  non_owner_bytename = "0x03"
+    const non_owner_bytename = "0x03"
 
     // Unique contracts (mastercopies and utility contracts):
     let qaxhMasterLedger
@@ -89,33 +89,53 @@ contract('AllowanceQaxhModule', function(accounts) {
         await qaxhModule2.activateKey(owner_2, {from : qaxh_address})
     })
 
-    it('activate, freeze and then delete a key', async () => {
+    it('check permissions when activating freezing or deleting a key', async () => {
         let key = accounts[3]
-
-        assert.equal(await qaxhModule.isNotAnOwner(key), true)
-        assert.equal(await qaxhModule.isFrozen(key), false)
-        assert.equal(await qaxhModule.isActive(key), false)
-
-        await qaxhModule.activateKey(key, {from : qaxh_address})
-
-        assert.equal(await qaxhModule.isActive(key), true)
-        assert.equal(await qaxhModule.isFrozen(key), false)
-        assert.equal(await qaxhModule.isNotAnOwner(key), false)
-
-        await qaxhModule.freezeKey(key, {from: qaxh_address})
-
-        assert.equal(await qaxhModule.isActive(key), false)
-        assert.equal(await qaxhModule.isNotAnOwner(key), false)
-        assert.equal(await qaxhModule.isFrozen(key), true)
-
-        await qaxhModule.removeKey(key, {from: qaxh_address})
-
-        assert.equal(await qaxhModule.isNotAnOwner(key), true)
-        assert.equal(await qaxhModule.isFrozen(key), false)
-        assert.equal(await qaxhModule.isActive(key), false)
+        // Checking qaxhModule keylist:
+        assert(await qaxhModule.isActive(owner_1))
+        assert(await qaxhModule.isNotAnOwner(key), true)
+        assert(await qaxhModule.isNotAnOwner(owner_2))
+        console.log("activate")
+        // Activate a key:
+        await utils.assertRejects(qaxhModule.activateKey(key, {from: non_owner}))
+        await utils.assertRejects(qaxhModule.activateKey(owner_2, {from: owner_1}))
+        await qaxhModule.activateKey(key, {from: qaxh_address})
+        assert(await qaxhModule.isActive(key))
+        // Freeze a key:
+        console.log("freeze")
+        await qaxhModule.activateKey(owner_2, {from: qaxh_address})
+        await utils.assertRejects(qaxhModule.freezeKey(key, {from: non_owner}))
+        await utils.assertRejects(qaxhModule.freezeKey(non_owner, {from: qaxh_address}))
+        await qaxhModule.freezeKey(key, {from: key})
+        await qaxhModule.freezeKey(owner_2, {from: owner_1})
+        await qaxhModule.freezeKey(owner_1, {from: qaxh_address})
+        assert(await qaxhModule.isFrozen(key))
+        assert(await qaxhModule.isFrozen(owner_2))
+        assert(await qaxhModule.isFrozen(owner_1))
+        // Unfreeze a key:
+        console.log("unfreeze")
+        await utils.assertRejects(qaxhModule.activateKey(owner_1, {from: non_owner}))
+        await qaxhModule.activateKey(owner_1, {from: qaxh_address})
+        await qaxhModule.activateKey(key, {from: owner_1})
+        await qaxhModule.activateKey(owner_2, {from: owner_2})
+        assert(await qaxhModule.isActive(owner_1))
+        assert(await qaxhModule.isActive(owner_2))
+        assert(await qaxhModule.isActive(key))
+        // Delete a key:
+        console.log("delete")
+        await qaxhModule.freezeKey(owner_2, {from: qaxh_address})
+        await utils.assertRejects(qaxhModule.removeKey(non_owner, {from: qaxh_address}))
+        await utils.assertRejects(qaxhModule.removeKey(key, {from: non_owner}))
+        await utils.assertRejects(qaxhModule.removeKey(key, {from: owner_2}))
+        await qaxhModule.removeKey(key, {from: key})
+        await qaxhModule.removeKey(owner_2, {from: owner_1})
+        await qaxhModule.removeKey(owner_1, {from: owner_1})
+        assert(await qaxhModule.isNotAnOwner(owner_1))
+        assert(await qaxhModule.isNotAnOwner(owner_2))
+        assert(await qaxhModule.isNotAnOwner(key))
     })
 
-    it('check presence of keys in keyList', async () => {
+    it('Add, freeze, remove and then list a QaxhModule keys', async () => {
         let k0 = accounts[0];
         let k1 = accounts[1];
         let k2 = accounts[2];
