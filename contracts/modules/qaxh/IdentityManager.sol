@@ -29,7 +29,7 @@ contract IdentityManager {
 
     /// @dev Return true if the indicated eIDAS is valid.
     modifier isEIDAS(uint8 _eIDAS) {
-        require(_eIDAS != 0 && _eIDAS <= 3, "Invalid eIDAS");
+        //require(_eIDAS != 0 && _eIDAS <= 3, "Invalid eIDAS");
         _;
     }
 
