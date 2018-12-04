@@ -95,14 +95,12 @@ contract('AllowanceQaxhModule', function(accounts) {
         assert(await qaxhModule.isActive(owner_1))
         assert(await qaxhModule.isNotAnOwner(key), true)
         assert(await qaxhModule.isNotAnOwner(owner_2))
-        console.log("activate")
         // Activate a key:
         await utils.assertRejects(qaxhModule.activateKey(key, {from: non_owner}))
         await utils.assertRejects(qaxhModule.activateKey(owner_2, {from: owner_1}))
         await qaxhModule.activateKey(key, {from: qaxh_address})
         assert(await qaxhModule.isActive(key))
         // Freeze a key:
-        console.log("freeze")
         await qaxhModule.activateKey(owner_2, {from: qaxh_address})
         await utils.assertRejects(qaxhModule.freezeKey(key, {from: non_owner}))
         await utils.assertRejects(qaxhModule.freezeKey(non_owner, {from: qaxh_address}))
@@ -113,7 +111,6 @@ contract('AllowanceQaxhModule', function(accounts) {
         assert(await qaxhModule.isFrozen(owner_2))
         assert(await qaxhModule.isFrozen(owner_1))
         // Unfreeze a key:
-        console.log("unfreeze")
         await utils.assertRejects(qaxhModule.activateKey(owner_1, {from: non_owner}))
         await qaxhModule.activateKey(owner_1, {from: qaxh_address})
         await qaxhModule.activateKey(key, {from: owner_1})
@@ -122,7 +119,6 @@ contract('AllowanceQaxhModule', function(accounts) {
         assert(await qaxhModule.isActive(owner_2))
         assert(await qaxhModule.isActive(key))
         // Delete a key:
-        console.log("delete")
         await qaxhModule.freezeKey(owner_2, {from: qaxh_address})
         await utils.assertRejects(qaxhModule.removeKey(non_owner, {from: qaxh_address}))
         await utils.assertRejects(qaxhModule.removeKey(key, {from: non_owner}))
@@ -323,5 +319,15 @@ contract('AllowanceQaxhModule', function(accounts) {
         assert.equal(logs.length, 1);
         assert.equal(logs[0]["event"], "CertifyIdentity");
         assert.equal(logs[0]["args"]["certifier"], owner_1)
+    })
+
+    //TODO Implement the feature in QaxhModule
+    it.skip('Refund the qaxh owner after a QaxhModule function call', async() => {
+        var owner_balance = await web3.eth.getBalance(owner_1).toNumber()
+        await qaxhModule.freezeKey(owner_1, {from: owner_1})
+        var current_balance = await web3.eth.getBalance(owner_1).toNumber()
+        console.log("balance:  " + current_balance)
+        console.log("expected: " + owner_balance)
+        assert(current_balance >= owner_balance)
     })
 });
