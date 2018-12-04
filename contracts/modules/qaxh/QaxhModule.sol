@@ -9,7 +9,11 @@ import "./QaxhUtils.sol";
 /// @author Loup Federico
 contract QaxhModule is Module, KeyManager, IdentityManager {
 
+    uint256 constant internal smallTransactionThreshold = 5000000000;
+
     /// @dev Setup qaxh and QaxhMasterLedger addresses references upon module creation.
+    ///      this function must be called in the same transaction that creates the Gnosis
+    ///      safe with CreateAndAddModules for security purposes.
     function setup(address _qaxh, address _ledger) public {
         require(qaxh == address(0), "QaxhModule.setup() can only be called once");
         setupUtils(_qaxh, _ledger);
@@ -26,7 +30,7 @@ contract QaxhModule is Module, KeyManager, IdentityManager {
 
     /// @dev If all conditions are met, emit the countersignature event containing the Qaxh client's public key.
     ///      Only an active key can accept the safe identity.
-    function acceptIdentity() public filterOwner {
+    function acceptIdentity() public filterAndRefundOwner(false, false) {
         certifyIdentity();
     }
 
@@ -42,25 +46,28 @@ contract QaxhModule is Module, KeyManager, IdentityManager {
         if (value != 0) {
             require(msg.sender == address(manager), "Only the Manager can order transactions.");
             require(
-                isActive(sender) || value < 5000000000 || QaxhMasterLedger(qaxhMasterLedger).qaxhSafe(sender) || sender == qaxh,
+                isActive(sender) || value < smallTransactionThreshold || QaxhMasterLedger(qaxhMasterLedger).qaxhSafe(sender) || sender == qaxh,
                 "The sender is not authorized to do that deposit."
             );
         }
     }
+
+    // KEY MANAGEMENT
 
     /// @dev Ask the GnosisSafe to send Ether or ERC20 tokens and revert on failure.
     /// @param to The receiver address.
     /// @param amount The amount of the transaction in Weis.
     /// @param token If set to 0, it is an Ether transaction, else it is a token transaction.
     /// @param data Ignored in case of token transaction. Else, the data field of the transaction.
-    function sendFromSafe(address to, uint256 amount, bytes data, address token) public filterOwner {
+    function sendFromSafe(address to, uint256 amount, bytes data, address token) public returns (bool) {
+        require(isActive(tx.origin), "Only active keys are allowed to send Ethers and tokens");
         if (token == address(0))
             require(manager.execTransactionFromModule(to, amount, data, Enum.Operation.Call),
-                    "Could not execute ether transfer");
+                   "Could not send Ethers from safe");
         else {
             bytes memory token_transaction = abi.encodeWithSignature("transfer(address,uint256)", to, amount);
             require(manager.execTransactionFromModule(token, 0, token_transaction, Enum.Operation.Call),
-                    "Could not execute token transfer");
+                   "Could not send tokens from safe");
         }
     }
 }

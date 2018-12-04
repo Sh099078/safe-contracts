@@ -33,7 +33,7 @@ contract AllowanceQaxhModule is QaxhModule {
     /// @param user The other Qaxh Safe that will benefit the allowance.
     /// @param allowance The amount of the allowance.
     /// @param token The address of the ERC20 Token.
-    function approve(address user, uint256 allowance, address token) public filterOwner {
+    function approve(address user, uint256 allowance, address token) public filterAndRefundOwner(false, false) {
         require(QaxhMasterLedger(qaxhMasterLedger).isQaxhSafe(user));
         allowances[user][token] = allowance;
     }
@@ -43,7 +43,7 @@ contract AllowanceQaxhModule is QaxhModule {
     /// @param to Destination address of the tokens.
     /// @param amount Amount of tokens to be sent.
     /// @param token Deployment address of the ERC20 token.
-    function askTransferFrom(ModuleManager sender, address to, uint256 amount, address token) public filterOwner {
+    function askTransferFrom(ModuleManager sender, address to, uint256 amount, address token) public filterAndRefundOwner(false, false) {
         address sender_qaxh_module = sender.getModules()[0];
         bytes memory data = abi.encodeWithSignature("transferFrom(address,uint256,address)", to, amount, token);
         require(manager.execTransactionFromModule(sender_qaxh_module, 0, data, Enum.Operation.Call), "askTransferFrom: transferFrom call failed");
