@@ -22,8 +22,8 @@ contract QaxhModule is Module, KeyManager, IdentityManager {
     }
 
     /// @dev Setup the QaxhModule identity if tx.origin has the appropriate rights.
-    function callSetupIdentity(string _QI_hash, string _QE_hash, uint8 _eIDAS) public filterQaxh {
-        setupIdentity(_QI_hash, _QE_hash, _eIDAS);
+    function callSetupIdentity(string _QI_hash, string _QE_hash, uint8 _identityLevel) public filterQaxh {
+        setupIdentity(_QI_hash, _QE_hash, _identityLevel);
     }
 
     // AUTHENTICATION PROCESS

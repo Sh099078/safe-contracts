@@ -308,7 +308,7 @@ contract('AllowanceQaxhModule', function(accounts) {
         await qaxhModule.callSetupIdentity("QI_1", "QE_1", 1, {from : qaxh_address})
         assert.equal(await qaxhModule.QI_hash(), "QI_1")
         assert.equal(await qaxhModule.QE_hash(), "QE_1")
-        assert.equal(await qaxhModule.eIDAS(), 1)
+        assert.equal(await qaxhModule.identityLevel(), 1)
         // Changing an already setup safe identity:
         await utils.assertRejects(qaxhModule.callSetupIdentity("QI_2", "QE_2", 1, {from : qaxh_address}))
         // Non-owner trying to validate the QaxhModule identity:

@@ -5,15 +5,14 @@ pragma solidity 0.4.24;
 contract IdentityManager {
     string public QI_hash;
     string public QE_hash;
-    uint8 public eIDAS;
+    uint8 public identityLevel;
     bool internal alreadySetup;
-    // string sub_hash;
 
-    function setupIdentity(string _QI_hash, string _QE_hash, uint8 _eIDAS) internal isEIDAS(_eIDAS) {
+    function setupIdentity(string _QI_hash, string _QE_hash, uint8 _identityLevel) internal checkIdentityLevel(_identityLevel) {
         require(!alreadySetup, "This safe already has a declared identity");
         QI_hash = _QI_hash;
         QE_hash = _QE_hash;
-        eIDAS = _eIDAS;
+        identityLevel = _identityLevel;
         alreadySetup = true;
     }
 
@@ -27,9 +26,9 @@ contract IdentityManager {
 
     // MODIFIERS
 
-    /// @dev Return true if the indicated eIDAS is valid.
-    modifier isEIDAS(uint8 _eIDAS) {
-        //require(_eIDAS != 0 && _eIDAS <= 3, "Invalid eIDAS");
+    /// @dev Return true if the indicated identityLevel is valid.
+    modifier checkIdentityLevel(uint8 _identityLevel) {
+        //TODO Add identityLevel value check once it is clearly defined in the specs
         _;
     }
 
