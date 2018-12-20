@@ -6,22 +6,14 @@ import "../../QaxhMasterLedger.sol";
 /// @author Loup Federico
 contract QaxhUtils {
 
-    address qaxh;
-    address qaxhMasterLedger;
+    address public qaxh;
+    address public qaxhMasterLedger;
 
     /// @dev Setup qaxh and QaxhMasterLedger addresses references upon module creation.
     function setupUtils(address _qaxh, address _qaxhMasterLedger) public {
         require(qaxh == address(0), "Qaxh utils setup can only be done once");
         qaxh = _qaxh;
         qaxhMasterLedger = _qaxhMasterLedger;
-    }
-
-    function get_qaxh() public view returns (address) {
-        return qaxh;
-    }
-
-    function get_qaxhMasterLedger() public view returns (address) {
-        return qaxhMasterLedger;
     }
 
     modifier filterQaxh() {
