@@ -330,4 +330,14 @@ contract('AllowanceQaxhModule', function(accounts) {
         console.log("expected: " + owner_balance)
         assert(current_balance >= owner_balance)
     })
+
+    it('Certify data with the QaxhModule', async() => {
+        var data = 'someRandomString'
+        await (utils.assertRejects(qaxhModule.certifyData(data, {from: non_owner})))
+        await (utils.assertRejects(qaxhModule.certifyData(data, {from: qaxh_address})))
+        transaction = await qaxhModule.certifyData("someRandomString", {from: owner_1})
+        logs = transaction["logs"]
+        assert.equal(logs.length, 1)
+        assert.equal(logs[0]["args"]["certifiedData"], data)
+    })
 });

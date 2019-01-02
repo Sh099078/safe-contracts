@@ -70,4 +70,14 @@ contract QaxhModule is Module, KeyManager, IdentityManager {
                    "Could not send tokens from safe");
         }
     }
+
+    // DATA CERTIFICATION
+
+    /// @dev Emit an event certifying data.
+    /// @param data Data to be certified. Example : transaction D1, hash of an image, etc.
+    function certifyData(string data) public filterAndRefundOwner(false, false) {
+        emit CertifyData(data);
+    }
+
+    event CertifyData(string certifiedData);
 }
