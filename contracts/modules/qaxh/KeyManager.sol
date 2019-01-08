@@ -123,11 +123,13 @@ contract KeyManager is QaxhUtils {
             continue;
     }
 
+    /// @dev Set an optional label for a given key safe.
     function setLabel(address _key, string label) public filterAndRefundOwner(false, false) {
         require(isActive(_key) || isFrozen(_key));
         keyLabels[_key] = label;
     }
 
+    /// @dev Get the label of a key safe. Default label value (if never set): an empty string.
     function getLabel(address _key) public view returns (string) {
         return keyLabels[_key];
     }
