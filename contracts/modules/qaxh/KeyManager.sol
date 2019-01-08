@@ -8,6 +8,7 @@ contract KeyManager is QaxhUtils {
 
     enum Status { NotAnOwner, Frozen, Active }
     mapping (address => Status) keyStatus;
+    mapping (address => string) keyLabels;
     mapping (address => address) keyList;
 
     address constant SENTINEL_KEYS = address(0x1);
@@ -59,6 +60,7 @@ contract KeyManager is QaxhUtils {
         keyList[prev] = keyList[_key];
         keyList[_key] = address(0);
         keyStatus[_key] = Status.NotAnOwner;
+        keyLabels[_key] = '';
         assert(this.isInKeyList(_key) == false);
     }
 
@@ -119,6 +121,15 @@ contract KeyManager is QaxhUtils {
     function listLength(address[MAX_KEYS] list) public pure returns (uint256 length) {
         for(length = 0; length < MAX_KEYS && list[length] != address(0); length++)
             continue;
+    }
+
+    function setLabel(address _key, string label) public filterAndRefundOwner(false, false) {
+        require(isActive(_key) || isFrozen(_key));
+        keyLabels[_key] = label;
+    }
+
+    function getLabel(address _key) public view returns (string) {
+        return keyLabels[_key];
     }
 
     // MODIFIERS

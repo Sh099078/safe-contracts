@@ -333,11 +333,20 @@ contract('AllowanceQaxhModule', function(accounts) {
 
     it('Certify data with the QaxhModule', async() => {
         var data = 'someRandomString'
-        await (utils.assertRejects(qaxhModule.certifyData(data, {from: non_owner})))
-        await (utils.assertRejects(qaxhModule.certifyData(data, {from: qaxh_address})))
+        await utils.assertRejects(qaxhModule.certifyData(data, {from: non_owner}))
+        await utils.assertRejects(qaxhModule.certifyData(data, {from: qaxh_address}))
         transaction = await qaxhModule.certifyData("someRandomString", {from: owner_1})
         logs = transaction["logs"]
         assert.equal(logs.length, 1)
         assert.equal(logs[0]["args"]["certifiedData"], data)
+    })
+
+    it('Setup key labels', async() => {
+        assert.equal(''.localeCompare(await qaxhModule.getLabel(owner_1)), 0);
+        await qaxhModule.setLabel(owner_1, "owner_1", {from: owner_1});
+        await utils.assertRejects(qaxhModule.setLabel(owner_1, "non_owner", {from: non_owner}));
+        assert.equal("owner_1".localeCompare(await qaxhModule.getLabel(owner_1)), 0);
+        await qaxhModule.removeKey(owner_1, {from: owner_1})
+        assert.equal(''.localeCompare(await qaxhModule.getLabel(owner_1)), 0);
     })
 });
